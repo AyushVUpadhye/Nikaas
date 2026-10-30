@@ -9,6 +9,7 @@ import copy
 import math
 from typing import Any
 
+from .sim import BOUNDARY, SPECIFIC_FLOW
 
 PENALTY_WEIGHTS = {
     # Critical violations
@@ -17,6 +18,8 @@ PENALTY_WEIGHTS = {
     "ZERO_WIDTH": 30.0,
     "NON_POSITIVE_ROOM_DIM": 30.0,
     # Warning violations
+    "INSUFFICIENT_EXIT_CAPACITY": 15.0,
+    "INSUFFICIENT_EXIT_COUNT": 15.0,
     "DISCONNECTED_EXIT": 15.0,
     "UNREACHABLE_EXIT": 15.0,
     "DISCONNECTED_COMPONENTS": 15.0,
@@ -58,6 +61,21 @@ def _effective_door_span(n_u: dict[str, Any], n_v: dict[str, Any]) -> float:
             dz = max(0.0, abs(pz - rz) - d / 2.0)
             return math.hypot(dx, dz)
     return _euclidean_dist(n_u, n_v)
+
+
+def exit_flow_capacity(width: Any, kind: str | None = None) -> float:
+    """Calculate egress flow capacity (persons/s) using the SFPE hydraulic model from nikaas/sim.py.
+
+    Boundary layer deduction and specific flow constants match the simulator exactly:
+    - effective_width = max(0.3, width - 2 * BOUNDARY[kind])
+    - capacity = effective_width * SPECIFIC_FLOW[kind]
+    """
+    if not (isinstance(width, (int, float)) and width > 0):
+        return 0.0
+    k = str(kind) if kind in SPECIFIC_FLOW else "door"
+    b = BOUNDARY.get(k, BOUNDARY["door"])
+    eff_w = max(0.3, float(width) - 2.0 * b)
+    return eff_w * SPECIFIC_FLOW[k]
 
 
 def analyze_graph(building: dict[str, Any]) -> dict[str, Any]:
@@ -474,6 +492,80 @@ def analyze_graph(building: dict[str, Any]) -> dict[str, Any]:
             "suggestion": "Verify building layout manually; excessive auto-links suggest missing doorways in the visual model output."
         })
 
+    # Total occupancy
+    total_occupancy = sum(int(r.get("people", 0)) for r in rooms.values())
+
+    # Check 6: Exit Capacity & Adequacy (SFPE Hydraulic Flow Model from nikaas/sim.py)
+    exit_capacities: dict[str, float] = {}
+    for eid in exits:
+        incident_egress = [
+            e for e in raw_edges
+            if isinstance(e, dict)
+            and ((e.get("from") == eid and e.get("to") in nodes and nodes[e["to"]].get("type") in ("corridor", "room"))
+                 or (e.get("to") == eid and e.get("from") in nodes and nodes[e["from"]].get("type") in ("corridor", "room")))
+        ]
+        cap = sum(exit_flow_capacity(e.get("width"), e.get("kind")) for e in incident_egress)
+        exit_capacities[eid] = cap
+
+    # Aggregate exit capacity: unique physical egress edges connecting reachable exits to interior spaces
+    egress_edge_indices: set[int] = set()
+    for idx, e in enumerate(raw_edges):
+        if not isinstance(e, dict):
+            continue
+        u = str(e.get("from"))
+        v = str(e.get("to"))
+        if u in reachable_exits and v in nodes and nodes[v].get("type") in ("corridor", "room"):
+            egress_edge_indices.add(idx)
+        elif v in reachable_exits and u in nodes and nodes[u].get("type") in ("corridor", "room"):
+            egress_edge_indices.add(idx)
+
+    aggregate_exit_capacity_pps = sum(
+        exit_flow_capacity(raw_edges[i].get("width"), raw_edges[i].get("kind"))
+        for i in egress_edge_indices
+    )
+
+    if aggregate_exit_capacity_pps > 0:
+        estimated_capacity_time_s = total_occupancy / aggregate_exit_capacity_pps
+    else:
+        estimated_capacity_time_s = math.inf
+
+    # Threshold: 150 s (project evacuation flow heuristic from build lead notes)
+    CAPACITY_TIME_HEURISTIC_S = 150.0
+    if total_occupancy > 0 and estimated_capacity_time_s > CAPACITY_TIME_HEURISTIC_S:
+        warnings.append({
+            "code": "INSUFFICIENT_EXIT_CAPACITY",
+            "severity": "warning",
+            "message": (
+                f"Total occupant load ({total_occupancy}) requires estimated {estimated_capacity_time_s:.1f} s "
+                f"to flow through aggregate exit capacity ({aggregate_exit_capacity_pps:.2f} persons/s), "
+                f"exceeding the {CAPACITY_TIME_HEURISTIC_S:.0f} s evacuation flow heuristic."
+            ),
+            "elements": sorted(reachable_exits),
+            "suggestion": "Add additional exit doors or widen existing exits to increase aggregate egress flow capacity.",
+        })
+        repair_suggestions.append(
+            f"Increase exit capacity by adding exits or widening doors to achieve <= {CAPACITY_TIME_HEURISTIC_S:.0f} s flow time."
+        )
+
+    # Check 7: Minimum Exit Count Analysis (NBC 2016 Part 4, Clause 4.4.2.1)
+    # Buildings/floors with occupant load > 50 require at least 2 remote exits.
+    if total_occupancy > 50 and len(reachable_exits) == 1:
+        only_exit = next(iter(reachable_exits))
+        warnings.append({
+            "code": "INSUFFICIENT_EXIT_COUNT",
+            "severity": "warning",
+            "message": (
+                f"Building has only 1 accessible exit ('{only_exit}') for {total_occupancy} occupants. "
+                f"Under NBC 2016 Part 4 (Clause 4.4.2.1), spaces with > 50 occupants require at least "
+                f"2 remote exits to prevent single-point-of-failure trapping."
+            ),
+            "elements": [only_exit],
+            "suggestion": "Verify building perimeter for missing exterior doors, emergency exits, or fire escapes.",
+        })
+        repair_suggestions.append(
+            "Add a second remote exit to comply with NBC 2016 Part 4 minimum egress requirements (> 50 occupants)."
+        )
+
     # Compute heuristic score
     total_penalty = 0.0
     critical_count = 0
@@ -494,8 +586,6 @@ def analyze_graph(building: dict[str, Any]) -> dict[str, Any]:
     else:
         status = "pass"
 
-    total_occupancy = sum(int(r.get("people", 0)) for r in rooms.values())
-
     report = {
         "status": status,
         "score": score,
@@ -509,6 +599,9 @@ def analyze_graph(building: dict[str, Any]) -> dict[str, Any]:
             "provenance": provenance_counts,
             "components_count": len(components),
             "total_occupancy": total_occupancy,
+            "aggregate_exit_capacity_pps": round(aggregate_exit_capacity_pps, 2),
+            "estimated_capacity_time_s": round(estimated_capacity_time_s, 1) if estimated_capacity_time_s != math.inf else None,
+            "per_exit_capacity_pps": {eid: round(c, 2) for eid, c in exit_capacities.items()},
         },
         "checks": {
             "connectivity": {
@@ -519,6 +612,19 @@ def analyze_graph(building: dict[str, Any]) -> dict[str, Any]:
             "exit_accessibility": {
                 "status": "critical" if not exits else ("warning" if unreachable_exits else "pass"),
                 "unreachable_exits": unreachable_exits,
+            },
+            "exit_capacity": {
+                "status": "warning" if (estimated_capacity_time_s > CAPACITY_TIME_HEURISTIC_S and total_occupancy > 0) else "pass",
+                "aggregate_capacity_pps": round(aggregate_exit_capacity_pps, 2),
+                "estimated_capacity_time_s": round(estimated_capacity_time_s, 1) if estimated_capacity_time_s != math.inf else None,
+                "threshold_s": CAPACITY_TIME_HEURISTIC_S,
+                "per_exit": {eid: round(c, 2) for eid, c in exit_capacities.items()},
+            },
+            "exit_count": {
+                "status": "warning" if (total_occupancy > 50 and len(reachable_exits) == 1) else ("critical" if not exits else "pass"),
+                "accessible_exits": len(reachable_exits),
+                "min_required": 2 if total_occupancy > 50 else 1,
+                "standard": "NBC 2016 Part 4, Clause 4.4.2.1",
             },
             "self_loops": {
                 "status": "warning" if self_loop_count > 0 else "pass",
