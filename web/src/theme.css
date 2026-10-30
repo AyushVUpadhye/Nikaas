@@ -179,6 +179,7 @@ body.phone-mode { background: #fff; }
 @keyframes route-run { to { stroke-dashoffset: -5; } }
 .pm-exit { fill: #9aa5af; }
 .pm-mine { fill: var(--exit); }
+.pm-fire { fill: var(--alarm); stroke: #ffd2c2; stroke-width: 1.4; }
 .pm-target { fill: none; stroke: var(--exit); stroke-width: .9; }
 .pm-me { fill: var(--evac); stroke: #fff; stroke-width: .5; }
 .phone-alarm { background: var(--alarm); color: #fff; }
