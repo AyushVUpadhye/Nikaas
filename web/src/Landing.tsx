@@ -1,20 +1,19 @@
 import { useEffect, useState } from 'react'
 
-type Result = { building: string; blocked: string; total_time_s: number; people: number; bottleneck: string }
 type Validation = { published_s: number; ours_s: number; error_pct: number }
+type Wow = { building: string; blocked: string; nearest_s: number; nikaas_s: number; pct_saved: number; gap_s: number }
 
 // Landing section. Every number is loaded from data generated out of runs/ (scripts/report.py,
 // scripts/run_validation.py), so the page cannot show a number we did not measure.
 export default function Landing() {
-  const [results, setResults] = useState<Result[]>([])
   const [val, setVal] = useState<Validation>()
+  const [wow, setWow] = useState<Wow[]>([])
   useEffect(() => {
-    fetch('data/results.json').then(r => r.json()).then(setResults).catch(() => {})
     fetch('data/validation.json').then(r => r.json()).then(setVal).catch(() => {})
+    fetch('data/wow.json').then(r => r.json()).then(setWow).catch(() => {})
   }, [])
-  const find = (b: string, blocked = '') => results.find(r => r.building === b && r.blocked === blocked)
-  const iit = find('iit_kgp_museum.json'), iitMain = find('iit_kgp_museum.json', 'MAIN')
-  const lab = find('lab_block.json'), labA = find('lab_block.json', 'A')
+  const w = (b: string, blocked = '') => wow.find(x => x.building === b && x.blocked === blocked)
+  const labW = w('lab_block.json'), iitW = w('iit_kgp_museum.json'), iitWB = w('iit_kgp_museum.json', 'MAIN')
 
   return (
     <section className="landing">
@@ -42,10 +41,10 @@ export default function Landing() {
       </div>
 
       <div className="stats">
+        <Stat big={labW ? `${labW.pct_saved}% faster` : '…'} label={labW ? `Nikaas plan on a 528-person lab block: ${labW.nearest_s} s → ${labW.nikaas_s} s, within ${labW.gap_s} s of the proven fastest possible` : ''} />
+        <Stat big={iitW ? `${iitW.nearest_s} → ${iitW.nikaas_s} s` : '…'} label="IIT Kharagpur museum floor, nearest-exit rule vs Nikaas plan" />
+        <Stat big={iitWB ? `${iitWB.nearest_s} → ${iitWB.nikaas_s} s` : '…'} label="same floor with the main entrance blocked, Nikaas re-plans" />
         <Stat big={val ? `${val.ours_s} s` : '…'} label={val ? `vs ${val.published_s} s in the SFPE handbook's worked example (${val.error_pct}% off)` : 'validation'} />
-        <Stat big={iit ? `${iit.total_time_s} s` : '…'} label={iit ? `to evacuate ${iit.people} people from the IIT Kharagpur museum floor, nearest-exit rule` : ''} />
-        <Stat big={iit && iitMain ? `+${(iitMain.total_time_s - iit.total_time_s).toFixed(1)} s` : '…'} label="if the main entrance is blocked" />
-        <Stat big={lab && labA ? `${(labA.total_time_s - lab.total_time_s).toFixed(1)} s` : '…'} label={lab && labA ? `on a lab block, closing a stair beats the nearest-exit rule (${labA.total_time_s} s vs ${lab.total_time_s} s)` : ''} />
       </div>
 
       <div className="features">

@@ -1,0 +1,68 @@
+[
+ {
+  "building": "iit_kgp_museum.json",
+  "blocked": "",
+  "people": 507,
+  "nearest_s": 145.25,
+  "nikaas_s": 124.0,
+  "saved_s": 21.25,
+  "pct_saved": 14.6,
+  "lower_bound_s": 117.59,
+  "gap_s": 6.41
+ },
+ {
+  "building": "iit_kgp_museum.json",
+  "blocked": "MAIN",
+  "people": 507,
+  "nearest_s": 318.0,
+  "nikaas_s": 223.5,
+  "saved_s": 94.5,
+  "pct_saved": 29.7,
+  "lower_bound_s": 221.58,
+  "gap_s": 1.92
+ },
+ {
+  "building": "lab_block.json",
+  "blocked": "",
+  "people": 528,
+  "nearest_s": 301.25,
+  "nikaas_s": 166.75,
+  "saved_s": 134.5,
+  "pct_saved": 44.6,
+  "lower_bound_s": 163.04,
+  "gap_s": 3.71
+ },
+ {
+  "building": "lab_block.json",
+  "blocked": "B",
+  "people": 528,
+  "nearest_s": 437.5,
+  "nikaas_s": 303.0,
+  "saved_s": 134.5,
+  "pct_saved": 30.7,
+  "lower_bound_s": 301.85,
+  "gap_s": 1.15
+ },
+ {
+  "building": "sample_floor.json",
+  "blocked": "",
+  "people": 300,
+  "nearest_s": 156.5,
+  "nikaas_s": 152.5,
+  "saved_s": 4.0,
+  "pct_saved": 2.6,
+  "lower_bound_s": 136.1,
+  "gap_s": 16.4
+ },
+ {
+  "building": "sample_floor.json",
+  "blocked": "A",
+  "people": 300,
+  "nearest_s": 262.25,
+  "nikaas_s": 262.25,
+  "saved_s": 0.0,
+  "pct_saved": 0.0,
+  "lower_bound_s": 259.67,
+  "gap_s": 2.58
+ }
+]
