@@ -32,3 +32,4 @@
 - **13:22** "Beat Nikaas": `POST /beat` (Ayush's scorer) + website panel; browser-tested against a local API (judge 155 s vs Nikaas 124 s). 40 tests pass.
 - **13:26** 3D: people now glide between simulated positions every render frame (exponential smoothing, snap on large jumps) with a small walking bob, instead of jumping once per simulated second. Browser-checked, no console errors.
 - **13:30** 3D walkways tinted red by peak queue (same rule as 2D). Subtle at overview zoom because people cover the walkways; follow-up: a floating bottleneck marker.
+- **13:30** (Bhumika) Restored PITCH.md, WHATIFS.md, CROWD_RESEARCH.md (dropped in rebase). Updated pitch wow number to 301→167 s (44.6%, from runs/wow.csv); fixed "movement time" language throughout per Chirag 13:16 note. WHATIFS tables use "movement time" header. README "For judges" section updated with real numbers from runs/.
