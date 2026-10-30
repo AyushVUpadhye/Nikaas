@@ -55,3 +55,4 @@ Newest at the bottom. Check this section after every `git pull`.
   245.2 s); on the lab block, closing a stair makes evacuation *faster* than the nearest-exit rule (`docs/RESULTS.md`).
 - **12:28** — The live API is up (Abhijeet): `https://4kzez16ucj.execute-api.ap-south-1.amazonaws.com/health`.
 - **12:46** — Video mode is ready: open the site with `?demo=1` (e.g. `npm run dev` then `http://localhost:5173/?demo=1`). It shows the landing page for 4 s, scrolls to the map, plays the nearest-exit run with a caption, then blocks the main entrance and plays the re-routed run. Saved runs only, so it works offline. Set speed with the 1-8x buttons before recording.
+- **12:54** — The wow numbers are in `runs/wow.csv` (Ayush): lab block nearest 301.25 s -> Nikaas 166.75 s (134.5 s, 44.6% faster, 3.71 s from the proven lower bound); IIT KGP 145.25 -> 124.0 s. `?demo=1` now plays nearest exit -> Nikaas plan -> main entrance blocked, with captions.

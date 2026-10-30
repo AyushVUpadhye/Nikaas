@@ -7,6 +7,7 @@ type Frame = { t: number; people: [number, number, string][] }
 type Run = {
   total_time_s: number; per_exit: Record<string, number>; bottleneck: string; peak_queue: number
   frames: Frame[]; door_routes?: Record<string, string[][]>
+  lower_bound_s?: number; nearest_s?: number // set for Nikaas plans
 }
 
 // Live API (AWS). Without it the page falls back to saved runs, so ?demo=1 and offline demos still work.
@@ -15,7 +16,8 @@ const DEMO = new URLSearchParams(location.search).has('demo')
 // Two versions of the same building: digitised by hand, and read from the photo by Amazon Nova Pro (nikaas/vision.py)
 const SOURCES = [
   { id: 'hand', label: 'Hand-digitised', file: 'data/iit_kgp_museum.json',
-    saved: { '': 'data/frames_iit_kgp_nearest.json', MAIN: 'data/frames_iit_kgp_blockedMAIN.json' } as Record<string, string> },
+    saved: { '': 'data/frames_iit_kgp_nearest.json', MAIN: 'data/frames_iit_kgp_blockedMAIN.json',
+      'nikaas:': 'data/frames_iit_kgp_nikaas.json', 'nikaas:MAIN': 'data/frames_iit_kgp_nikaas_blockedMAIN.json' } as Record<string, string> },
   { id: 'vision', label: 'Read from the photo (Amazon Nova Pro)', file: 'data/vision_nova_pro.json',
     saved: { '': 'data/frames_vision_nova_pro_nearest.json' } as Record<string, string> },
 ]
@@ -28,16 +30,25 @@ const LEGEND: [string, string, string][] = [
 const fmt = (s: number) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(Math.floor(s % 60)).padStart(2, '0')}`
 const cssVar = (v: string) => getComputedStyle(document.documentElement).getPropertyValue(v).trim()
 
-async function fetchRun(building: Building, blocked: string[], SAVED: Record<string, string>): Promise<Run> {
-  const key = blocked.slice().sort().join('+')
+async function post(path: string, body: unknown) {
+  const r = await fetch(`${API}${path}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
+  if (!r.ok) throw new Error(`Server error ${r.status} on ${path}`)
+  return r.json()
+}
+
+// plan 'nearest' = today's rule; 'nikaas' = Ayush's optimiser (/optimise), then simulated with that plan
+async function fetchRun(building: Building, blocked: string[], SAVED: Record<string, string>, plan: string): Promise<Run> {
+  const b = blocked.slice().sort().join('+')
+  const key = plan === 'nikaas' ? `nikaas:${b}` : b
   if ((!API || DEMO) && key in SAVED) return (await fetch(SAVED[key])).json()
   if (!API) throw new Error('This scenario needs the live API (set VITE_API_URL).')
-  const r = await fetch(`${API}/simulate`, {
-    method: 'POST', headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ building, blocked }),
-  })
-  if (!r.ok) throw new Error(`Simulator error ${r.status}`)
-  return r.json()
+  if (plan !== 'nikaas') return post('/simulate', { building, blocked })
+  const [opt, nearest] = await Promise.all([
+    post('/optimise', { building, blocked }),
+    post('/simulate', { building, blocked, frame_every: 1e6 }),
+  ])
+  const run = await post('/simulate', { building, blocked, plan: opt.plan })
+  return { ...run, lower_bound_s: opt.lower_bound_s, nearest_s: nearest.total_time_s }
 }
 
 export default function App() {
@@ -51,6 +62,7 @@ export default function App() {
   const [playing, setPlaying] = useState(true)
   const [speed, setSpeed] = useState(4)
   const [mode3d, setMode3d] = useState(true)
+  const [plan, setPlan] = useState<'nearest' | 'nikaas'>('nearest')
   const canvas = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => { setBuilding(undefined); setRun(undefined); setBlocked([]); setBaseline(undefined); fetch(source.file).then(r => r.json()).then(setBuilding) }, [source])
@@ -58,11 +70,11 @@ export default function App() {
     if (!building) return
     let live = true
     setRun(undefined); setError(''); setI(0)
-    fetchRun(building, blocked, source.saved)
-      .then(r => { if (live) { setRun(r); if (!blocked.length) setBaseline(r.total_time_s) } })
+    fetchRun(building, blocked, source.saved, plan)
+      .then(r => { if (live) { setRun(r); if (!blocked.length && plan === 'nearest') setBaseline(r.total_time_s) } })
       .catch(e => live && setError(String(e.message ?? e)))
     return () => { live = false }
-  }, [building, blocked])
+  }, [building, blocked, plan])
   useEffect(() => {
     if (!run || !playing) return
     const id = setInterval(() => setI(k => Math.min(k + 1, run.frames.length - 1)), 1000 / speed)
@@ -79,14 +91,15 @@ export default function App() {
   }, [])
   useEffect(() => {
     if (!DEMO || !run) return
-    if (!blocked.length) setCaption('Today: everyone takes the nearest exit. Watch where the queues form.')
-    else setCaption('The main entrance is blocked. Everyone is re-routed to the two exits left, live.')
-    const atEnd = i >= run.frames.length - 1
-    if (atEnd && !blocked.length) {
-      const t = setTimeout(() => setBlocked(['MAIN']), 2500)
-      return () => clearTimeout(t)
-    }
-  }, [run, i, blocked])
+    if (plan === 'nearest') setCaption('Today: everyone takes the nearest exit. Watch where the queues form.')
+    else if (!blocked.length) setCaption('Nikaas plan: each room gets the exit that empties the building fastest.')
+    else setCaption('The main entrance is blocked. Nikaas re-plans for the two exits left.')
+    if (i < run.frames.length - 1) return
+    const next = plan === 'nearest' ? () => setPlan('nikaas') : !blocked.length ? () => setBlocked(['MAIN']) : undefined
+    if (!next) return
+    const t = setTimeout(next, 2500)
+    return () => clearTimeout(t)
+  }, [run, i, blocked, plan])
 
   const view = useMemo(() => {
     if (!building) return undefined
@@ -167,6 +180,10 @@ export default function App() {
       </header>
       <p style={{ color: 'var(--muted)', margin: '6px 0 16px' }}>{building?.name}</p>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 12 }}>
+        <span style={{ color: 'var(--muted)' }}>Plan:</span>
+        <button className={plan === 'nearest' ? 'on' : ''} onClick={() => setPlan('nearest')}>Today: nearest exit</button>
+        <button className={plan === 'nikaas' ? 'on' : ''} onClick={() => setPlan('nikaas')}>Nikaas plan</button>
+        <span style={{ width: 12 }} />
         <span style={{ color: 'var(--muted)' }}>Building:</span>
         {SOURCES.map(src => <button key={src.id} className={src.id === source.id ? 'on' : ''} onClick={() => setSource(src)}>{src.label}</button>)}
       </div>
@@ -209,6 +226,16 @@ export default function App() {
           ))}
           <hr style={{ border: 0, borderTop: '1px solid var(--line)' }} />
           <Stat label="Total evacuation" value={run ? `${run.total_time_s} s${delta !== undefined ? `  (${delta >= 0 ? '+' : ''}${delta.toFixed(1)} s vs all exits open)` : ''}` : '…'} />
+          {run?.nearest_s !== undefined && (
+            <div style={{ background: '#ecfdf3', border: '1px solid var(--accent)', padding: '8px 10px', marginTop: 8 }}>
+              <div style={{ fontFamily: 'var(--serif)', fontSize: 26, color: 'var(--accent)' }}>
+                {(run.nearest_s - run.total_time_s).toFixed(1)} s faster
+              </div>
+              <div style={{ fontSize: 13 }}>than the nearest-exit rule ({run.nearest_s} s), {(100 * (run.nearest_s - run.total_time_s) / run.nearest_s).toFixed(1)}% saved</div>
+              {run.lower_bound_s !== undefined && <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 4 }}>
+                within {(run.total_time_s - run.lower_bound_s).toFixed(1)} s of the fastest possible ({run.lower_bound_s} s, proven lower bound)</div>}
+            </div>
+          )}
           <Stat label="Bottleneck (peak queue)" value={run ? `${run.bottleneck} (${run.peak_queue})` : '…'} />
           <Stat label="People per exit" value={run ? Object.entries(run.per_exit).map(([k, v]) => `${k} ${v}`).join(' · ') : '…'} />
           <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 12 }}>
