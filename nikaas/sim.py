@@ -96,6 +96,8 @@ def simulate(b: Building, plan: dict, blocked=(), seed=7, max_t=1800.0, frame_ev
                                      oz=(rng.random() - .5) * node.get("d", 4) * .8))
                 pid += 1
 
+    total_people = len(people)
+
     # Base capacities
     cap = {e.key: effective_width(e) * SPECIFIC_FLOW[e.kind] for e in b.edges}  # persons / s
     credit = {k: 0.0 for k in cap}
@@ -170,11 +172,19 @@ def simulate(b: Building, plan: dict, blocked=(), seed=7, max_t=1800.0, frame_ev
     group_rr_ptr = {g: 0 for g in capacity_groups}
     landing_toggle = {e.key: True for e in b.edges}
 
+    # Active sets for high-performance simulation
+    # 1. Pending pre-movements sorted descending by (start, pid) to pop in ascending pid order
+    pending_inside = sorted(people, key=lambda p: (p.start, p.pid), reverse=True)
+    # 2. Active walkers set (pids currently walking or descending stairs)
+    active_walkers = set()
+    # 3. People evacuated count for O(1) completion check
+    people_out = 0
+
     while t <= max_t:
         # 1) people whose pre-movement ended join the queue of their first edge
-        for p in people:
-            if p.state == "inside" and t >= p.start:
-                want_edge(p)
+        while pending_inside and t >= pending_inside[-1].start:
+            p = pending_inside.pop()
+            want_edge(p)
 
         # 2a) Ungrouped edges admit people independently
         for k in ungrouped_keys:
@@ -182,9 +192,11 @@ def simulate(b: Building, plan: dict, blocked=(), seed=7, max_t=1800.0, frame_ev
             credit[k] += cap[k] * DT
             while q and credit[k] >= 1.0:
                 credit[k] -= 1.0
-                p = people[q.pop(0)]
+                pid_admit = q.pop(0)
+                p = people[pid_admit]
                 e = edge_of[(p.path[p.leg], p.path[p.leg + 1])]
                 p.state, p.s = ("stairs" if e.kind == "stair" else "walking"), 0.0
+                active_walkers.add(pid_admit)
             if not q:
                 credit[k] = min(credit[k], 1.0)
             peak_q[k] = max(peak_q[k], len(q))
@@ -226,9 +238,11 @@ def simulate(b: Building, plan: dict, blocked=(), seed=7, max_t=1800.0, frame_ev
                     if serve_internal and internal_indices:
                         idx = internal_indices[0]
                         credit[k] -= 1.0
-                        p = people[queues[k].pop(idx)]
+                        pid_admit = queues[k].pop(idx)
+                        p = people[pid_admit]
                         e = edge_of[(p.path[p.leg], p.path[p.leg + 1])]
                         p.state, p.s = "stairs", 0.0
+                        active_walkers.add(pid_admit)
                         landing_toggle[k] = not landing_toggle[k]
                         progress = True
                         break
@@ -249,9 +263,11 @@ def simulate(b: Building, plan: dict, blocked=(), seed=7, max_t=1800.0, frame_ev
                         if ext_idx is not None:
                             group_credit[g] -= 1.0
                             credit[cand_k] -= 1.0
-                            p = people[queues[cand_k].pop(ext_idx)]
+                            pid_admit = queues[cand_k].pop(ext_idx)
+                            p = people[pid_admit]
                             e = edge_of[(p.path[p.leg], p.path[p.leg + 1])]
                             p.state, p.s = "stairs", 0.0
+                            active_walkers.add(pid_admit)
                             landing_toggle[cand_k] = not landing_toggle[cand_k]
                             group_rr_ptr[g] = (cand_idx + 1) % n_edges
                             progress = True
@@ -265,19 +281,23 @@ def simulate(b: Building, plan: dict, blocked=(), seed=7, max_t=1800.0, frame_ev
                     credit[k] = min(credit[k], 1.0)
                 peak_q[k] = max(peak_q[k], len(queues[k]))
 
-        # 3) walkers advance; at the end of an edge they reach a node
-        for p in people:
-            if p.state not in ("walking", "stairs"):
-                continue
+        # 3) active walkers advance; at the end of an edge they reach a node
+        finished_walkers = []
+        for pid_w in sorted(active_walkers):
+            p = people[pid_w]
             e = edge_of[(p.path[p.leg], p.path[p.leg + 1])]
             p.s += (STAIR_SPEED if e.kind == "stair" else WALK_SPEED) * DT
             if p.s >= e.length:
                 p.leg += 1
+                finished_walkers.append(pid_w)
                 if p.leg == len(p.path) - 1:  # reached the exit node
                     p.state, p.t_out = "out", t + DT
                     exit_count[p.exit] += 1
+                    people_out += 1
                 else:
                     want_edge(p)
+        for pid_w in finished_walkers:
+            active_walkers.remove(pid_w)
         t += DT
         if t >= next_frame:
             frame_2d = []
@@ -292,12 +312,12 @@ def simulate(b: Building, plan: dict, blocked=(), seed=7, max_t=1800.0, frame_ev
                 f_dict["people_3d"] = frame_3d
             frames.append(f_dict)
             next_frame += frame_every
-        if all(p.state == "out" for p in people):
+        if people_out == total_people:
             break
 
-    done = all(p.state == "out" for p in people)
+    done = (people_out == total_people)
     bottleneck = max(peak_q, key=peak_q.get) if peak_q else None
-    tot_time = round(max(p.t_out for p in people), 2) if done and people else None
+    tot_time = round(max((p.t_out for p in people), default=0.0), 2) if done and people else None
 
     # Multi-floor progress and stairwell metrics
     per_floor = {}

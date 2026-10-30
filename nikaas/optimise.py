@@ -201,7 +201,7 @@ def lower_bound(b: Building | dict, blocked=()) -> float:
     return round(total_people / total_cap + min_w, 2) if total_cap > 0 else 0.0
 
 
-def optimise(b: Building | dict, blocked=()) -> dict:
+def optimise(b: Building | dict, blocked=(), initial_plan: dict | None = None) -> dict:
     """Find exit allocation {room: exit} that empties the building fastest.
     Returns: {"plan": {room: exit}, "total_time_s": float, "lower_bound_s": float}
     """
@@ -211,11 +211,6 @@ def optimise(b: Building | dict, blocked=()) -> dict:
     open_exits = [x for x in b.exits if x not in blocked]
     if not open_exits:
         raise ValueError("no reachable open exit in building")
-
-    # Start with nearest exit assignment
-    current_plan = nearest_plan(b, blocked)
-    current_sim = simulate(b, current_plan, blocked, frame_every=1e9)
-    current_time = current_sim["total_time_s"]
 
     # Pre-filter reachable exits per room
     reachable_exits = {}
@@ -227,6 +222,26 @@ def optimise(b: Building | dict, blocked=()) -> dict:
 
     cap = compute_exit_capacities(b, blocked)
     rooms = b.rooms
+    occ = b.people()
+
+    # Initial plan: smart warm-start if previous valid plan is provided, else nearest
+    if initial_plan:
+        current_plan = {r: ex for r, ex in initial_plan.items() if r in rooms and ex in reachable_exits[r]}
+        exit_loads = {x: sum(occ.get(r, 0) for r, e in current_plan.items() if e == x) / max(cap.get(x, 1.0), 0.1) for x in open_exits}
+        for r in rooms:
+            if r not in current_plan:
+                # Assign disrupted room to reachable exit minimizing current load + walk time
+                best_ex = min(
+                    reachable_exits[r],
+                    key=lambda x: exit_loads.get(x, 0) + shortest_path(b, r, x, blocked)[0] / 1.2
+                )
+                current_plan[r] = best_ex
+                exit_loads[best_ex] += occ.get(r, 0) / max(cap.get(best_ex, 1.0), 0.1)
+    else:
+        current_plan = nearest_plan(b, blocked)
+
+    current_sim = simulate(b, current_plan, blocked, frame_every=1e9)
+    current_time = current_sim["total_time_s"] if current_sim["total_time_s"] is not None else float("inf")
 
     # Greedy search with 1-opt and 2-opt moves focused on the bottleneck
     max_iterations = 50
@@ -262,7 +277,7 @@ def optimise(b: Building | dict, blocked=()) -> dict:
                 try:
                     sim = simulate(b, cand, blocked, frame_every=1e9)
                     t = sim["total_time_s"]
-                    if t < best_time - 0.01:
+                    if t is not None and t < best_time - 0.01:
                         best_time = t
                         best_plan = cand
                         best_sim = sim
@@ -285,7 +300,7 @@ def optimise(b: Building | dict, blocked=()) -> dict:
                         try:
                             sim = simulate(b, cand, blocked, frame_every=1e9)
                             t = sim["total_time_s"]
-                            if t < best_time - 0.01:
+                            if t is not None and t < best_time - 0.01:
                                 best_time = t
                                 best_plan = cand
                                 best_sim = sim
@@ -302,11 +317,12 @@ def optimise(b: Building | dict, blocked=()) -> dict:
 
     lb = lower_bound(b, blocked)
     # The lower bound mathematically cannot exceed actual time
-    lb = min(lb, current_time)
+    if current_time != float("inf"):
+        lb = min(lb, current_time)
 
     return {
         "plan": current_plan,
-        "total_time_s": current_time,
+        "total_time_s": current_time if current_time != float("inf") else None,
         "lower_bound_s": lb,
     }
 

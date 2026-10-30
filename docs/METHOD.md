@@ -22,3 +22,11 @@ rather than guess them. When we say "the Nikaas plan is X s faster", X is a diff
 
 **What we do not claim.** We do not claim a total RSET or that a building is "safe". Pre-movement time can be
 added per room through `simulate(..., premove=(min_s, max_s))` once real alarm and drill data are available.
+
+## Stochastic Monte Carlo & Uncertainty Analysis
+
+To account for human behavioral variance and crowd fluctuations (analogous to commercial egress tools such as Thunderhead Pathfinder), Nikaas includes a stochastic Monte Carlo simulation engine (`nikaas/monte_carlo.py`, executed via `scripts/monte_carlo.py`):
+
+1. **Pre-movement Delay Distribution:** Each occupant draws an independent pre-movement recognition/response delay from a uniform distribution $U(t_{\min}, t_{\max})$. A default of $U(5.0\text{ s}, 30.0\text{ s})$ is provided as a configurable engineering assumption for managed-drill benchmarking (rapid alarm recognition and trained staff direction in office/educational environments).
+2. **Occupancy Uncertainty:** Room occupancies are perturbed uniformly within $\pm 20\%$ to reflect dynamic room attendance during an emergency.
+3. **Robustness Metric:** Across $N = 200$ independent trials, Nikaas compares empirical clearance percentiles (P50, P95) and reports the win rate $P(T_{\text{Nikaas}} < T_{\text{Nearest}})$, proving that capacity-balanced exit routing is statistically robust against behavioral scatter (see `runs/monte_carlo.csv`).

@@ -65,7 +65,8 @@ def start(building: dict, blocked: list[str], previous: dict | None = None) -> d
     """Plan the building with the given exits blocked and publish it as the new drill state."""
     b = load(building)
     blocked_set = set(blocked)
-    opt = optimise(b, blocked_set)
+    prev_plan = {r: d["exit"] for r, d in (previous or {}).get("rooms", {}).items() if "exit" in d} if previous else None
+    opt = optimise(b, blocked_set, initial_plan=prev_plan)
     rooms = _instructions(b, opt["plan"], blocked_set)
     old = (previous or {}).get("rooms", {})
     changed = sorted(r for r, x in rooms.items() if r in old and old[r]["exit"] != x["exit"])
