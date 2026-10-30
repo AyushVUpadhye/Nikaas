@@ -17,7 +17,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from nikaas.building import load, nearest_plan  # noqa: E402
+from nikaas.building import load, nearest_plan, validate  # noqa: E402
 from nikaas.sim import simulate  # noqa: E402
 from nikaas.vision import MODEL_ID, read_map  # noqa: E402
 
@@ -40,12 +40,15 @@ def match_rooms(truth, got):
             score = difflib.SequenceMatcher(None, a, b).ratio()
             if set(a.split()) & set(b.split()) - {"and", "of", "in", "the", "room", "gallery", "hall"}:
                 score = max(score, 0.6)
+            # a weak name match far away is a different room (e.g. "guest room" vs "washroom")
+            if score < 0.8 and math.hypot(t["x"] - g["x"], t["z"] - g["z"]) > 20:
+                continue
             pairs.append((score, t["id"], g["id"]))
     used_t, used_g, out = set(), set(), []
     byid_t = {n["id"]: n for n in t_rooms}
     byid_g = {n["id"]: n for n in g_rooms}
     for score, ti, gi in sorted(pairs, reverse=True):
-        if score < 0.5 or ti in used_t or gi in used_g:
+        if score < 0.58 or ti in used_t or gi in used_g:
             continue
         used_t.add(ti)
         used_g.add(gi)
@@ -90,7 +93,7 @@ def section(truth, got, probs, model, secs):
     v = got.get("vision", {})
     u = v.get("usage", {})
     L = [f"## {model}", "",
-         f"Took {secs:.0f} s, {v.get('calls')} model call(s), exits added by the exits pass: {v.get('exits_added') or 'none'}, {len(v.get('auto_links', []))} link(s) added by `connect`, {u.get('inputTokens')} input + {u.get('outputTokens')} output tokens.", "",
+         f"Took {secs if secs is not None else '?'} s, {v.get('calls')} model call(s), exits added by the exits pass: {v.get('exits_added') or 'none'}, {len(v.get('auto_links', []))} link(s) added by `connect`, {u.get('inputTokens')} input + {u.get('outputTokens')} output tokens.", "",
          "| | Hand-digitised | Vision |", "|---|---|---|",
          f"| Rooms | {count(truth, 'room')} | {count(got, 'room')} |",
          f"| Exits | {count(truth, 'exit')} | {count(got, 'exit')} ({len(ex_ok)} within {EXIT_RADIUS_M:g} m of a hand exit) |",
@@ -132,6 +135,7 @@ def main():
     ap.add_argument("--truth", default="data/iit_kgp_museum.json")
     ap.add_argument("--width", type=float, default=81.0, help="building east-west length in metres")
     ap.add_argument("--models", nargs="+", default=[MODEL_ID])
+    ap.add_argument("--from-runs", action="store_true", help="re-score the saved runs/vision_*.json, no Bedrock calls")
     a = ap.parse_args()
 
     photo, truth_path = ROOT / a.photo, ROOT / a.truth
@@ -142,12 +146,18 @@ def main():
 
     body, rows = [], []
     for model in a.models:
-        t0 = time.time()
-        got, probs = read_map(img, fmt, width_m=a.width, name=f"{truth_path.stem} (vision, {model})", model_id=model)
-        secs = time.time() - t0
         short = re.sub(r"[^a-z0-9]+", "-", model.split(".", 1)[-1].lower()).strip("-")
         out = RUNS / f"vision_{truth_path.stem}_{short}.json"
-        out.write_text(json.dumps(got, indent=1), encoding="utf-8")
+        if a.from_runs:  # re-score the saved graph, no Bedrock call
+            got = json.loads(out.read_text(encoding="utf-8"))
+            probs = validate(got)
+            secs = got.get("vision", {}).get("secs")
+        else:
+            t0 = time.time()
+            got, probs = read_map(img, fmt, width_m=a.width, name=f"{truth_path.stem} (vision, {model})", model_id=model)
+            secs = round(time.time() - t0, 1)
+            got["vision"]["secs"] = secs
+            out.write_text(json.dumps(got, indent=1), encoding="utf-8")
         L, s = section(truth, got, probs, model, secs)
         body += L + [f"Graph saved to `{out.relative_to(ROOT).as_posix()}`.", ""]
         rows.append(s)

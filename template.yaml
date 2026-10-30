@@ -5,7 +5,7 @@ Description: Nikaas - evacuation planner API (Lambda + HTTP API) and web hosting
 Globals:
   Function:
     Timeout: 29 # HTTP API gives up after 30 s
-    MemorySize: 1024
+    MemorySize: 2048 # >= 1769 MB = one full vCPU; /optimise on lab_block takes ~8 s on a laptop core
     Runtime: python3.11
     Architectures: [x86_64]
 
@@ -14,7 +14,7 @@ Resources:
   ApiFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: .
+      CodeUri: build/lambda/ # staged by scripts/build_lambda.py (nikaas/ + runtime requirements only)
       Handler: nikaas.api.handler
       Environment:
         Variables:

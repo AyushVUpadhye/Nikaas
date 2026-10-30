@@ -40,9 +40,18 @@ const res = await fetch(`${API}/vision`, { method: 'POST', headers: { 'content-t
 Needs Python 3.11 on `PATH` (SAM builds Linux packages for the `python3.11` runtime).
 
 ```bash
+python scripts/build_lambda.py
 sam build
 sam deploy
 ```
+
+`scripts/build_lambda.py` stages only `nikaas/` and the runtime requirements in `build/lambda/` (the template's
+`CodeUri`). Packaging the repo root pulls in `web/node_modules` and `data/` and goes over Lambda's 250 MB limit.
+
+numpy/scipy (used by `/optimise`) are capped in `requirements.txt` (numpy < 2.3, scipy < 1.16): newer versions
+only ship Linux wheels for glibc 2.28+, and the python3.11 Lambda image has glibc 2.26. Do not lift the cap
+without moving the runtime to python3.12+. Never deploy a package without scipy: `nikaas/api.py` imports the
+optimiser at start-up, so every route would fail.
 
 Settings (stack `nikaas`, region) are in `samconfig.toml`, so no prompts.
 
