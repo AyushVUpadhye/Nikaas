@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from nikaas.building import load, nearest_plan
-from nikaas.sim import SPECIFIC_FLOW, WALK_SPEED, simulate
+from nikaas.sim import BOUNDARY, SPECIFIC_FLOW, WALK_SPEED, simulate
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -21,7 +21,7 @@ def test_single_door_matches_hand_calculation():
     n, w, L = 120, 1.0, 10.0
     b = one_room(n, w, L)
     out = simulate(b, {"r": "X"})
-    expected = n / (w * SPECIFIC_FLOW["door"]) + L / WALK_SPEED
+    expected = n / ((w - 2 * BOUNDARY["door"]) * SPECIFIC_FLOW["door"]) + L / WALK_SPEED
     assert out["completed"]
     assert out["total_time_s"] == pytest.approx(expected, rel=0.05)
 
@@ -101,3 +101,22 @@ def test_room_with_two_doors_uses_both():
 def two_nodes_one_door():
     return [{"id": "r", "type": "room", "x": 0, "z": 0, "people": 100, "w": .1, "d": .1},
             {"id": "c1", "type": "corridor", "x": 2, "z": -1}, {"id": "X", "type": "exit", "x": 10, "z": 0}]
+
+
+def test_reproduces_sfpe_engineering_guide_example_1():
+    """300 people, two 32 in doors into two 44 in stairs (7/11 in, 50 ft), 10 ft landing to the exit.
+    Published hand calculation: T1 1.0 s + T2 225.0 s + T3 19.2 s = 245.2 s
+    (Thunderhead Pathfinder verification docs, SFPE Example 1)."""
+    FT, IN = 0.3048, 0.0254
+    nodes = [{"id": "room", "type": "room", "x": 0, "z": 0, "people": 300, "w": 0.01, "d": 0.01}]
+    edges = []
+    for k in ("L", "R"):
+        nodes += [{"id": f"top{k}", "type": "corridor", "x": 0, "z": 0}, {"id": f"bot{k}", "type": "corridor", "x": 0, "z": 0},
+                  {"id": f"X{k}", "type": "exit", "x": 0, "z": 0}]
+        edges += [{"from": "room", "to": f"top{k}", "width": 32 * IN, "length": 1.0 * WALK_SPEED, "kind": "door"},
+                  {"from": f"top{k}", "to": f"bot{k}", "width": 44 * IN, "length": 50 * FT, "kind": "stair"},
+                  {"from": f"bot{k}", "to": f"X{k}", "width": 30 * FT, "length": 10 * FT, "kind": "corridor"}]
+    # the example is symmetric: model one side with half the occupants (150), as the hand calculation does
+    out_l = simulate(load({"nodes": [dict(n, people=150) if n["id"] == "room" else n for n in nodes if not n["id"].endswith("R")],
+                           "edges": [e for e in edges if not e["to"].endswith("R")]}), {"room": "XL"})
+    assert out_l["total_time_s"] == pytest.approx(245.2, rel=0.02)

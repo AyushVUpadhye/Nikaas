@@ -11,9 +11,26 @@ from dataclasses import dataclass
 
 from .building import Building, shortest_path
 
-WALK_SPEED = 1.19  # m/s, unimpeded horizontal walking (SFPE)
-STAIR_SPEED = 0.85  # m/s along the stair slope (SFPE, typical riser/tread)
-SPECIFIC_FLOW = {"corridor": 1.3, "door": 1.3, "stair": 1.1}  # persons / s / m of clear width (SFPE max)
+FT = 0.3048  # metres per foot
+# Values from the SFPE hydraulic model as used in SFPE Engineering Guide Example 1 (worked in
+# Thunderhead Pathfinder docs, "SFPE Example 1", verified 30 Oct 2026) and the SFPE Handbook chapter
+# "Employing the Hydraulic Model in Assessing Emergency Movement" (Gwynne & Rosenbaum).
+WALK_SPEED = 3.9 * FT  # 1.19 m/s unimpeded horizontal speed
+STAIR_SPEED = 0.85 * 212 * FT / 60  # 0.915 m/s along a 7/11 in stair at maximum flow
+SPECIFIC_FLOW = {  # persons / s / metre of EFFECTIVE width
+    "door": 24 / 60 / FT,  # 1.312
+    "corridor": 24 / 60 / FT,  # 1.312
+    "stair": 18.5 / 60 / FT,  # 1.012, 7/11 in stair
+}
+# boundary layer removed from EACH side of the clear width. Door jamb 6 in (SFPE Example 1, verified).
+# Stair and corridor walls: SFPE table values as commonly quoted (15 cm, 20 cm) - see docs/QUESTIONS.md.
+BOUNDARY = {"door": 6 * 0.0254, "stair": 0.15, "corridor": 0.20}
+
+
+def effective_width(e):
+    return max(0.3, e.width - 2 * BOUNDARY[e.kind])
+
+
 DT = 0.25  # s
 
 
@@ -79,7 +96,7 @@ def simulate(b: Building, plan: dict, blocked=(), seed=7, max_t=1800.0, frame_ev
                                      oz=(rng.random() - .5) * node.get("d", 4) * .8))
                 pid += 1
 
-    cap = {e.key: e.width * SPECIFIC_FLOW[e.kind] for e in b.edges}  # persons / s
+    cap = {e.key: effective_width(e) * SPECIFIC_FLOW[e.kind] for e in b.edges}  # persons / s
     credit = {k: 0.0 for k in cap}
     queues = {k: [] for k in cap}  # FIFO of person ids waiting to enter the edge
     peak_q = {k: 0 for k in cap}
