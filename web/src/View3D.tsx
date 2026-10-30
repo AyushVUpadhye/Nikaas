@@ -15,6 +15,7 @@ type Props = {
   edgeLoad?: Record<string, number>
   bottleneck?: string
   peakQueue?: number
+  height?: number
   onExit: (id: string) => void
 }
 
@@ -23,7 +24,7 @@ type Props = {
 const WALL_H = 1.3, WALL_T = 0.18
 const STATE_COLOR: Record<string, string> = { walking: '#f26a2e', queuing: '#c81e1e', stairs: '#2563eb', inside: '#8a939b' }
 
-export default function View3D({ building, frame, blocked, routes, edgeLoad, bottleneck, peakQueue, onExit }: Props) {
+export default function View3D({ building, frame, blocked, routes, edgeLoad, bottleneck, peakQueue, height = 560, onExit }: Props) {
   const host = useRef<HTMLDivElement>(null)
   const api = useRef<any>({})
 
@@ -31,7 +32,7 @@ export default function View3D({ building, frame, blocked, routes, edgeLoad, bot
   useEffect(() => {
     const el = host.current
     if (!el) return
-    const W = el.clientWidth, H = 560
+    const W = el.clientWidth, H = height
     const renderer = new THREE.WebGLRenderer({ antialias: true })
     renderer.setPixelRatio(Math.min(2, window.devicePixelRatio))
     renderer.setSize(W, H)
@@ -188,7 +189,7 @@ export default function View3D({ building, frame, blocked, routes, edgeLoad, bot
 
     api.current = { ...api.current, scene, body, head, exitMeshes, routeGroup, byId, N, strips, marker, tagCanvas, tagTex, cur: [], target: undefined }
     return () => { cancelAnimationFrame(raf); ro.disconnect(); renderer.dispose(); el.removeChild(renderer.domElement) }
-  }, [building])
+  }, [building, height])
 
   useEffect(() => { api.current.onExit = onExit }, [onExit])
 
@@ -264,5 +265,5 @@ export default function View3D({ building, frame, blocked, routes, edgeLoad, bot
     if (body.instanceColor) body.instanceColor.needsUpdate = true
   }, [frame])
 
-  return <div ref={host} style={{ width: '100%', height: 560, background: '#e8ecef', border: '1px solid var(--line)', cursor: 'grab' }} />
+  return <div ref={host} style={{ width: '100%', height, background: '#e8ecef', border: '1px solid var(--line)', cursor: 'grab' }} />
 }

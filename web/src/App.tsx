@@ -87,11 +87,6 @@ export default function App() {
   // then the main entrance is blocked and the re-planned run plays. Uses saved runs only (no network).
   const [caption, setCaption] = useState('')
   useEffect(() => {
-    if (!DEMO) return
-    const t = setTimeout(() => document.getElementById('try')?.scrollIntoView({ behavior: 'smooth' }), 4000)
-    return () => clearTimeout(t)
-  }, [])
-  useEffect(() => {
     if (!DEMO || !run) return
     if (plan === 'nearest') setCaption('Today: everyone takes the nearest exit. Watch where the queues form.')
     else if (!blocked.length) setCaption('Nikaas plan: each room gets the exit that empties the building fastest.')
@@ -178,11 +173,8 @@ export default function App() {
   const delta = run && baseline !== undefined && blocked.length ? run.total_time_s - baseline : undefined
 
   return (
-    <main style={{ maxWidth: 1280, margin: '0 auto', padding: '24px 16px' }}>
-      <header style={{ display: 'flex', alignItems: 'baseline', gap: 16, flexWrap: 'wrap' }}>
-        <h1 style={{ fontFamily: 'var(--serif)', fontSize: 44, margin: 0 }}>Nikaas</h1>
-        <span style={{ color: 'var(--muted)' }}>Photograph the exit map. Get everyone out faster.</span>
-      </header>
+    <div className="page">
+      <h2 style={{ marginBottom: 4 }}>The twin</h2>
       <p style={{ color: 'var(--muted)', margin: '6px 0 16px' }}>{building?.name}</p>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 12 }}>
         <span style={{ color: 'var(--muted)' }}>Plan:</span>
@@ -257,7 +249,7 @@ export default function App() {
         </label>
       )}
       {building && !DEMO && <BeatNikaas api={API} building={building} blocked={blocked} startPlan={plan === 'nearest' ? run?.plan : undefined} />}
-    </main>
+    </div>
   )
 }
 
