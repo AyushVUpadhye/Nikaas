@@ -20,3 +20,4 @@ Fallback: if 3D is not ready by 03:00, the 2D player is the demo.
 Newest at the bottom. Check this section after every `git pull`.
 - **11:47** — `/simulate` now returns `edge_load`: peak queue per edge (`"from-to": count`, busiest first). Use it to colour jammed corridors/stairs red; `bottleneck` is the worst one.
 - **11:47** — Until the API is deployed, use `data/frames_sample_nearest.json` and `data/frames_sample_blockedA.json` (real simulator output, same shape as the API).
+- **11:58** — `/simulate` now also returns `routes`: for each room the list of node ids to its exit. Draw the green escape ribbons along those nodes (coordinates from the building JSON). The sample frames files in `data/` are regenerated with `routes`.

@@ -40,7 +40,7 @@ def simulate(b: Building, plan: dict, blocked=(), seed=7, max_t=1800.0, frame_ev
     for e in b.edges:
         edge_of[(e.a, e.b)] = e
         edge_of[(e.b, e.a)] = e
-    people, pid = [], 0
+    people, pid, routes = [], 0, {}
     for room, n in b.people().items():
         ex = plan[room]
         if ex in blocked:
@@ -48,6 +48,7 @@ def simulate(b: Building, plan: dict, blocked=(), seed=7, max_t=1800.0, frame_ev
         _, path = shortest_path(b, room, ex, blocked)
         if not path:
             raise ValueError(f"no route from {room} to {ex}")
+        routes[room] = path
         node = b.nodes[room]
         for _ in range(n):
             people.append(Person(pid, room, ex, path, start=rng.uniform(*premove),
@@ -123,5 +124,6 @@ def simulate(b: Building, plan: dict, blocked=(), seed=7, max_t=1800.0, frame_ev
         "bottleneck": bottleneck,
         "peak_queue": peak_q.get(bottleneck, 0) if bottleneck else 0,
         "edge_load": {k: v for k, v in sorted(peak_q.items(), key=lambda kv: -kv[1])},  # peak queue per edge, busiest first
+        "routes": routes,  # room -> [node ids] to its exit, for drawing escape ribbons
         "frames": frames,
     }

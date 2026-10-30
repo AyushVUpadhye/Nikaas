@@ -4,7 +4,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from .building import load, nearest_plan
+from .building import load, nearest_plan, validate
 from .sim import simulate
 
 app = FastAPI(title="Nikaas")
@@ -30,8 +30,21 @@ def health():
     return {"ok": True}
 
 
+class BuildingRequest(BaseModel):
+    building: dict
+
+
+@app.post("/validate")
+def check(req: BuildingRequest):
+    probs = validate(req.building)
+    return {"ok": not probs, "problems": probs}
+
+
 @app.post("/simulate")
 def run(req: SimRequest):
+    probs = validate(req.building)
+    if probs:
+        raise HTTPException(422, {"problems": probs})
     try:
         b = load(req.building)
         plan = req.plan or nearest_plan(b, set(req.blocked))

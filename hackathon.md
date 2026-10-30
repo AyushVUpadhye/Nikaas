@@ -7,3 +7,4 @@
   peak queue 92 at Stair A. With Stair A blocked: 196.75 s, all 300 via Stair B.
 - **11:35** Task briefs per person (`docs/TASKS.md`), sample frames for the frontend in `data/`.
 - **11:44** Per-edge peak queue (`edge_load`) in the simulate output for jam colouring; Lambda entry point `nikaas.api.handler` (Mangum) ready for Abhijeet. 8 tests pass.
+- **11:58** Building validation (`/validate`, readable problems, 422 on bad input) and per-room `routes` in the simulate output. 13 tests pass.
