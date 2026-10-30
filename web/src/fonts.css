@@ -1,5 +1,7 @@
-/* Big Shoulders Display and Atkinson Hyperlegible (SIL Open Font License), self-hosted so the site works offline */
+/* Bricolage Grotesque, Big Shoulders Display and Atkinson Hyperlegible (SIL Open Font License), self-hosted so the site works offline */
 @font-face { font-family: 'Atkinson Hyperlegible'; font-weight: 400; font-style: normal; font-display: swap; src: url('/fonts/AtkinsonHyperlegible-400.woff2') format('woff2'); }
 @font-face { font-family: 'Atkinson Hyperlegible'; font-weight: 700; font-style: normal; font-display: swap; src: url('/fonts/AtkinsonHyperlegible-700.woff2') format('woff2'); }
 @font-face { font-family: 'Big Shoulders Display'; font-weight: 600; font-style: normal; font-display: swap; src: url('/fonts/BigShouldersDisplay-600.woff2') format('woff2'); }
 @font-face { font-family: 'Big Shoulders Display'; font-weight: 800; font-style: normal; font-display: swap; src: url('/fonts/BigShouldersDisplay-800.woff2') format('woff2'); }
+@font-face { font-family: 'Bricolage Grotesque'; font-weight: 500; font-style: normal; font-display: swap; src: url('/fonts/BricolageGrotesque-500.woff2') format('woff2'); }
+@font-face { font-family: 'Bricolage Grotesque'; font-weight: 700; font-style: normal; font-display: swap; src: url('/fonts/BricolageGrotesque-700.woff2') format('woff2'); }

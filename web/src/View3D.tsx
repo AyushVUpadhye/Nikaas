@@ -16,6 +16,8 @@ type Props = {
   bottleneck?: string
   peakQueue?: number
   height?: number
+  cameraT?: number   // scroll film: 0..1 along a scripted camera path (disables orbit controls)
+  wallRise?: number  // scroll film: 0..1, walls and furniture rise out of the floor
   onExit: (id: string) => void
 }
 
@@ -24,7 +26,7 @@ type Props = {
 const WALL_H = 1.7, WALL_T = 0.2
 const STATE_COLOR: Record<string, string> = { walking: '#f05a22', queuing: '#c8321a', stairs: '#2563eb', inside: '#e0763f' }
 
-export default function View3D({ building, frame, blocked, routes, edgeLoad, bottleneck, peakQueue, height = 560, onExit }: Props) {
+export default function View3D({ building, frame, blocked, routes, edgeLoad, bottleneck, peakQueue, height = 560, cameraT, wallRise = 1, onExit }: Props) {
   const host = useRef<HTMLDivElement>(null)
   const api = useRef<any>({})
 
@@ -42,11 +44,11 @@ export default function View3D({ building, frame, blocked, routes, edgeLoad, bot
     el.appendChild(renderer.domElement)
 
     const scene = new THREE.Scene()
-    scene.background = new THREE.Color('#e8ecef')
+    scene.background = new THREE.Color('#eef1f3')
     const xs = building.nodes.map(n => n.x), zs = building.nodes.map(n => n.z)
     const cx = (Math.min(...xs) + Math.max(...xs)) / 2, cz = (Math.min(...zs) + Math.max(...zs)) / 2
     const span = Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...zs) - Math.min(...zs)) + 14
-    scene.fog = new THREE.Fog('#e8ecef', span * 1.4, span * 3)
+    scene.fog = new THREE.Fog('#eef1f3', span * 1.4, span * 3)
 
     scene.add(new THREE.HemisphereLight('#ffffff', '#9aa3ab', 1.2))
     const sun = new THREE.DirectionalLight('#fff7ee', 2.0)
@@ -67,9 +69,10 @@ export default function View3D({ building, frame, blocked, routes, edgeLoad, bot
     tileTex.wrapS = tileTex.wrapT = THREE.RepeatWrapping; tileTex.anisotropy = 8
     const tiled = (len: number) => { const t = tileTex.clone(); t.needsUpdate = true; t.repeat.set(Math.max(1, len / 0.5), WALL_H / 0.5); return new THREE.MeshStandardMaterial({ map: t, roughness: 0.9 }) }
     const deskMat = mat('#e6e9ec'), legMat = mat('#b9c0c7'), plantMat = mat('#5b8a4a')
+    const rise = new THREE.Group(); scene.add(rise) // walls + furniture: scaled in y for the 'becomes a building' moment
     const box = (w: number, h: number, d: number, m: any, x: number, y: number, z: number) => {
       const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m)
-      b.position.set(x, y, z); b.castShadow = true; b.receiveShadow = true; scene.add(b); return b
+      b.position.set(x, y, z); b.castShadow = true; b.receiveShadow = true; rise.add(b); return b
     }
     const slab = new THREE.Mesh(new THREE.PlaneGeometry(span + 10, span * 0.75 + 10), floorMat)
     slab.rotation.x = -Math.PI / 2; slab.position.set(cx, 0, cz); slab.receiveShadow = true; scene.add(slab)
@@ -133,8 +136,8 @@ export default function View3D({ building, frame, blocked, routes, edgeLoad, bot
           const dx = x0 + 1.2 + (a + 0.5) * ((w - 2.4) / cols), dz = z0 + 1.8 + (c + 0.5) * ((d - 3) / rows)
           box(1.5, 0.08, 0.7, deskMat, dx, 0.74, dz); box(1.4, 0.7, 0.06, legMat, dx, 0.37, dz)
         }
-        const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.18, 0.4, 12), white); pot.position.set(x1 - 0.7, 0.2, z0 + 0.7); scene.add(pot)
-        const leaf = new THREE.Mesh(new THREE.SphereGeometry(0.45, 12, 10), plantMat); leaf.position.set(x1 - 0.7, 0.75, z0 + 0.7); leaf.castShadow = true; scene.add(leaf)
+        const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.18, 0.4, 12), white); pot.position.set(x1 - 0.7, 0.2, z0 + 0.7); rise.add(pot)
+        const leaf = new THREE.Mesh(new THREE.SphereGeometry(0.45, 12, 10), plantMat); leaf.position.set(x1 - 0.7, 0.75, z0 + 0.7); leaf.castShadow = true; rise.add(leaf)
       }
     }
     // exits: a post with a sign, clickable
@@ -200,6 +203,7 @@ export default function View3D({ building, frame, blocked, routes, edgeLoad, bot
     })
 
     let raf = 0
+    const filmTarget = new THREE.Vector3(cx, 0, cz)
     // smooth motion: every render frame, people glide toward their latest simulated position
     const M = new THREE.Matrix4(), hide = new THREE.Matrix4().makeScale(0, 0, 0)
     let last = performance.now()
@@ -229,7 +233,9 @@ export default function View3D({ building, frame, blocked, routes, edgeLoad, bot
         fr.glow.intensity = 40 + Math.sin(tt * 11) * 12
       }
       if (marker.visible) { const k = 1 + 0.12 * Math.sin(now / 250); ring.scale.set(k, k, k) }
-      controls.update(); renderer.render(scene, camera); raf = requestAnimationFrame(loop)
+      const film = api.current.film
+      if (film) { camera.position.lerp(film.pos, 0.12); filmTarget.lerp(film.look, 0.12); camera.lookAt(filmTarget) } else controls.update()
+      renderer.render(scene, camera); raf = requestAnimationFrame(loop)
     }
     loop()
     const ro = new ResizeObserver(() => {
@@ -237,7 +243,7 @@ export default function View3D({ building, frame, blocked, routes, edgeLoad, bot
     })
     ro.observe(el)
 
-    api.current = { ...api.current, scene, body, head, exitMeshes, routeGroup, byId, N, strips, marker, tagCanvas, tagTex, fires, cur: [], target: undefined }
+    api.current = { ...api.current, scene, body, head, exitMeshes, routeGroup, byId, N, strips, marker, tagCanvas, tagTex, fires, rise, camera, controls, cx, cz, span, cur: [], target: undefined }
     return () => { cancelAnimationFrame(raf); ro.disconnect(); renderer.dispose(); el.removeChild(renderer.domElement) }
   }, [building, height])
 
@@ -299,6 +305,36 @@ export default function View3D({ building, frame, blocked, routes, edgeLoad, bot
     g.fillStyle = '#fff'; g.font = '600 46px Segoe UI'; g.textAlign = 'center'; g.fillText(`Bottleneck · queue ${peakQueue ?? ''}`, 256, 80)
     tagTex.needsUpdate = true
   }, [bottleneck, peakQueue, building])
+
+  useEffect(() => {
+    const r = api.current.rise
+    if (!r) return
+    const k = Math.max(0.001, Math.min(1, wallRise))
+    r.scale.y = k
+  }, [wallRise, building])
+
+  // scripted camera for the scroll film: keyframes over t in [0, 1]
+  useEffect(() => {
+    const a = api.current
+    if (!a.camera) return
+    if (cameraT === undefined) { a.film = undefined; a.controls.enabled = true; return }
+    a.controls.enabled = false
+    const { cx, cz, span } = a
+    const bn = a.marker?.visible ? a.marker.position : new THREE.Vector3(cx, 0, cz)
+    const keys: [number, any, any][] = [
+      [0.00, new THREE.Vector3(cx, span * 1.05, cz + 0.01), new THREE.Vector3(cx, 0, cz)],                       // plan view, like the map
+      [0.30, new THREE.Vector3(cx - span * 0.35, span * 0.55, cz + span * 0.6), new THREE.Vector3(cx, 0, cz)],    // tilt into 3D as walls rise
+      [0.55, new THREE.Vector3(bn.x - 9, 11, bn.z + 16), new THREE.Vector3(bn.x, 0, bn.z)],                       // dive to the jam
+      [0.75, new THREE.Vector3(cx + span * 0.3, span * 0.45, cz + span * 0.55), new THREE.Vector3(cx, 0, cz)],    // Nikaas re-plans
+      [1.00, new THREE.Vector3(cx, span * 0.7, cz + span * 0.75), new THREE.Vector3(cx, 0, cz)],                  // pull back
+    ]
+    const t = Math.max(0, Math.min(1, cameraT))
+    let i = 0
+    while (i < keys.length - 2 && t > keys[i + 1][0]) i++
+    const [t0, p0, l0] = keys[i], [t1, p1, l1] = keys[i + 1]
+    const u = (t - t0) / Math.max(1e-6, t1 - t0), e = u * u * (3 - 2 * u) // smoothstep
+    a.film = { pos: p0.clone().lerp(p1, e), look: l0.clone().lerp(l1, e) }
+  }, [cameraT, building, bottleneck])
 
   // latest simulated positions and colours; the render loop glides people toward them
   useEffect(() => {
