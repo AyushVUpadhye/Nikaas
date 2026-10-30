@@ -1,0 +1,39 @@
+{
+  "name": "Sample floor (provisional, replace with CSE Labs from the photo)",
+  "units": "m",
+  "nodes": [
+    {"id": "lab1", "type": "room", "x": -15, "z": -7, "w": 10, "d": 10, "people": 58},
+    {"id": "lab2", "type": "room", "x": -5, "z": -7, "w": 10, "d": 10, "people": 55},
+    {"id": "lab3", "type": "room", "x": 5, "z": -7, "w": 10, "d": 10, "people": 55},
+    {"id": "staff", "type": "room", "x": 15, "z": -7, "w": 10, "d": 10, "people": 17},
+    {"id": "lab4", "type": "room", "x": -13, "z": 7, "w": 14, "d": 10, "people": 61},
+    {"id": "sem", "type": "room", "x": 1, "z": 7, "w": 14, "d": 10, "people": 54},
+    {"id": "c_w", "type": "corridor", "x": -19, "z": 0},
+    {"id": "c_l1", "type": "corridor", "x": -15, "z": 0},
+    {"id": "c_l4", "type": "corridor", "x": -13, "z": 0},
+    {"id": "c_l2", "type": "corridor", "x": -5, "z": 0},
+    {"id": "c_sm", "type": "corridor", "x": 1, "z": 0},
+    {"id": "c_l3", "type": "corridor", "x": 5, "z": 0},
+    {"id": "c_st", "type": "corridor", "x": 15, "z": 0},
+    {"id": "c_e", "type": "corridor", "x": 19, "z": 0},
+    {"id": "A", "type": "exit", "x": -22, "z": 0, "label": "Stair A"},
+    {"id": "B", "type": "exit", "x": 22, "z": 0, "label": "Stair B"}
+  ],
+  "edges": [
+    {"from": "lab1", "to": "c_l1", "width": 1.0},
+    {"from": "lab2", "to": "c_l2", "width": 1.0},
+    {"from": "lab3", "to": "c_l3", "width": 1.0},
+    {"from": "staff", "to": "c_st", "width": 1.0},
+    {"from": "lab4", "to": "c_l4", "width": 1.0},
+    {"from": "sem", "to": "c_sm", "width": 1.0},
+    {"from": "c_w", "to": "c_l1", "width": 3.0},
+    {"from": "c_l1", "to": "c_l4", "width": 3.0},
+    {"from": "c_l4", "to": "c_l2", "width": 3.0},
+    {"from": "c_l2", "to": "c_sm", "width": 3.0},
+    {"from": "c_sm", "to": "c_l3", "width": 3.0},
+    {"from": "c_l3", "to": "c_st", "width": 3.0},
+    {"from": "c_st", "to": "c_e", "width": 3.0},
+    {"from": "c_w", "to": "A", "width": 1.5, "kind": "stair"},
+    {"from": "c_e", "to": "B", "width": 1.5, "kind": "stair"}
+  ]
+}

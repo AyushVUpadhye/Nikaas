@@ -1,0 +1,34 @@
+"""HTTP API (FastAPI). Run locally: uvicorn nikaas.api:app --reload
+Contract: docs/CONTRACT.md. Abhijeet wraps this for Lambda (Mangum) in the SAM template."""
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+
+from .building import load, nearest_plan
+from .sim import simulate
+
+app = FastAPI(title="Nikaas")
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+
+
+class SimRequest(BaseModel):
+    building: dict
+    plan: dict | None = None  # room -> exit; null = nearest open exit
+    blocked: list[str] = []
+
+
+@app.get("/health")
+def health():
+    return {"ok": True}
+
+
+@app.post("/simulate")
+def run(req: SimRequest):
+    try:
+        b = load(req.building)
+        plan = req.plan or nearest_plan(b, set(req.blocked))
+        out = simulate(b, plan, set(req.blocked))
+    except (KeyError, ValueError) as e:
+        raise HTTPException(422, str(e))
+    out["plan"] = plan
+    return out
