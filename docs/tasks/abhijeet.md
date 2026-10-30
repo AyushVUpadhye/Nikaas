@@ -1,4 +1,4 @@
-# Abhijeet — all AWS, photo → graph, README, pitch
+# Abhijeet — all AWS, photo → graph
 
 Part of Nikaas (AfterHours 1.0). Read first: `docs/CONTRACT.md` (shared data format) and `docs/TASKS.md` (team rules, checkpoints).
 
@@ -10,8 +10,7 @@ Part of Nikaas (AfterHours 1.0). Read first: `docs/CONTRACT.md` (shared data for
    ask for JSON in the `docs/CONTRACT.md` format, validate with `nikaas.building.load`. Compare against Chirag's
    hand-made `data/cse_labs.json`; write the differences to `runs/vision_check.md`.
 4. **Upload flow (by 23:00):** `POST /vision` endpoint + S3 for photos; deploy everything; frontend on S3.
-5. **README "For judges, start here" (by 06:00):** live URL, video, how to run, results table generated from `runs/`.
-6. **Pitch + video (07:30–09:00):** 3-minute pitch, rehearse twice with a timer; record the demo.
+5. **Give Bhumika the live URL** as soon as it works (for the README and the pitch).
 
 Fallback: if Bedrock misreads the map, the hand-made JSON + editor is the demo and vision is shown as "assisted".
 
@@ -22,3 +21,4 @@ Newest at the bottom. Check this section after every `git pull`.
 - **11:58** — Run every vision result through `nikaas.building.validate(d)` (or `POST /validate`); it returns readable problems like `room staff cannot reach any exit`. Put them in `runs/vision_check.md`.
 - **12:00** — No public floor plan of the CSE Labs exists online; if anyone can photograph a real posted evacuation map, test vision on it and compare with `data/lab_block.json`'s format.
 - **12:05** — Test vision on `data/maps/iit_kgp_nmst_block_b.jpg` (real photographed panel) and compare with the hand-digitised `data/iit_kgp_museum.json`. Same photo, so the comparison is fair.
+- **12:25** — README, pitch and demo video moved to Bhumika so you can focus on AWS and vision. Send her the live URL when it is up.

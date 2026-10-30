@@ -14,3 +14,4 @@
 - **12:10** Validated against SFPE Engineering Guide Example 1: 245.25 s vs published 245.2 s (`test_reproduces_sfpe_engineering_guide_example_1`). Re-measured (commit 36c9916): IIT KGP nearest 145.25 s (bottleneck verandah door, queue 104); lab block nearest 301.25 s, and **closing Stair A makes it faster (284.75 s)** - the nearest-exit rule is worse than losing a stair.
 - **12:16** `web/` started: 2D player of the IIT KGP building playing real simulator frames (nearest vs main entrance blocked), handed to Bhumika. Design research method added: `docs/DESIGN_RESEARCH.md`.
 - **12:17** Queued people now get distinct positions in frames (render fix only; evacuation times unchanged). 17 tests pass.
+- **12:25** API responses gzipped (largest run 4.54 MB raw, 0.08 MB on the wire; Lambda limit 6 MB). Roles changed: Chirag takes the website; Bhumika takes pitch, README, demo video and Crowd mode stadium data; Abhijeet keeps AWS + vision.

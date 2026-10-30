@@ -18,7 +18,7 @@ Checkpoints: **15:30** something demoable · **23:00** everything deployed · **
 
 | Person | File |
 |---|---|
-| Chirag | [docs/tasks/chirag.md](tasks/chirag.md) — build lead, simulator, API |
+| Chirag | [docs/tasks/chirag.md](tasks/chirag.md) — build lead, simulator, API, website |
 | Ayush | [docs/tasks/ayush.md](tasks/ayush.md) — optimiser, lower bound, wow number |
-| Bhumika | [docs/tasks/bhumika.md](tasks/bhumika.md) — web app, realistic 3D view |
-| Abhijeet | [docs/tasks/abhijeet.md](tasks/abhijeet.md) — all AWS, photo → graph, README, pitch |
+| Bhumika | [docs/tasks/bhumika.md](tasks/bhumika.md) — pitch, proof, demo video, Crowd mode data |
+| Abhijeet | [docs/tasks/abhijeet.md](tasks/abhijeet.md) — all AWS, photo → graph |
