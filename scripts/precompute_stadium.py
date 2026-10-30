@@ -17,7 +17,8 @@ Usage (run from repo root):
 
 Outputs:
     web/public/data/stadium_scaled.json         — scaled building (2,001 people)
-    web/public/data/frames_stadium_nearest.json — sim frames + crowd result
+    web/public/data/frames_stadium_nearest.json — sim frames + crowd result, nearest-exit rule
+    web/public/data/frames_stadium_nikaas.json  — the same for the Nikaas plan (optimise())
     runs/stadium_results.csv                    — headline numbers for RESULTS.md
 """
 import csv
@@ -38,6 +39,7 @@ def main():
 
     from nikaas.building import load, nearest_plan
     from nikaas.crowd import analyse as crowd_analyse
+    from nikaas.optimise import optimise
     from nikaas.sim import simulate
 
     # ── scale the stadium ─────────────────────────────────────────────────────
@@ -54,50 +56,42 @@ def main():
     actual_total = sum(n.get("people", 0) for n in scaled["nodes"] if n.get("type") == "room")
     print(f"Stadium scaled: {original_total} -> {actual_total} people")
 
-    # ── simulate ──────────────────────────────────────────────────────────────
+    # ── simulate both plans: today's nearest-exit rule and the Nikaas plan ────
+    # (optimise() takes ~13 s here, too slow for a live API call, so the website loads these runs)
     b = load(scaled)
-    plan = nearest_plan(b, set())
-    sim = simulate(b, plan, set(), max_t=2000, frame_every=5)
-    sim["plan"] = plan
+    plans = {"nearest": (nearest_plan(b, set()), None)}
+    opt = optimise(b, set())
+    plans["nikaas"] = (opt["plan"], opt["lower_bound_s"])
 
-    # ── crowd analysis ────────────────────────────────────────────────────────
-    sim["crowd"] = crowd_analyse(sim, scaled)
-
-    print(
-        f"Simulation: {sim['total_time_s']} s, {len(sim['frames'])} frames, "
-        f"max crowd density {sim['crowd']['max_density']} p/m² "
-        f"on edge '{sim['crowd']['worst_edge']}'"
-    )
-
-    # ── save outputs ──────────────────────────────────────────────────────────
     building_out = WEB / "stadium_scaled.json"
     building_out.write_text(json.dumps(scaled, indent=2), encoding="utf-8")
     print(f"Building saved: {building_out}")
 
-    frames_out = WEB / "frames_stadium_nearest.json"
-    frames_out.write_text(json.dumps(sim), encoding="utf-8")
-    mb = frames_out.stat().st_size / 1e6
-    print(f"Frames saved: {frames_out}  ({mb:.2f} MB)")
+    rows = []
+    for name, (plan, bound) in plans.items():
+        sim = simulate(b, plan, set(), max_t=2000, frame_every=5)
+        sim["plan"] = plan
+        sim["crowd"] = crowd_analyse(sim, scaled)
+        if bound is not None:  # what the Twin's side panel shows for a Nikaas plan
+            sim["lower_bound_s"], sim["nearest_s"] = round(bound, 2), rows[0][4]
+        crowd = sim["crowd"]
+        print(f"{name}: {sim['total_time_s']} s, {len(sim['frames'])} frames, "
+              f"max crowd density {crowd['max_density']} p/m² on edge '{crowd['worst_edge']}'")
+        frames_out = WEB / f"frames_stadium_{name}.json"
+        frames_out.write_text(json.dumps(sim), encoding="utf-8")
+        print(f"Frames saved: {frames_out}  ({frames_out.stat().st_size / 1e6:.2f} MB)")
+        rows.append(["stadium_gates.json (scaled)", name, "-", actual_total, sim["total_time_s"],
+                     crowd["max_density"], crowd["worst_edge"], crowd.get("first_crush_t", ""),
+                     "" if bound is None else round(bound, 2)])
 
     # ── headline CSV ──────────────────────────────────────────────────────────
     csv_out = RUNS / "stadium_results.csv"
     with csv_out.open("w", newline="") as f:
         w = csv.writer(f)
         w.writerow(["building", "plan", "blocked_exit", "people", "total_time_s",
-                    "max_density_pm2", "worst_edge", "first_crush_t"])
-        crowd = sim["crowd"]
-        w.writerow([
-            "stadium_gates.json (scaled)",
-            "nearest",
-            "-",
-            actual_total,
-            sim["total_time_s"],
-            crowd["max_density"],
-            crowd["worst_edge"],
-            crowd.get("first_crush_t", ""),
-        ])
+                    "max_density_pm2", "worst_edge", "first_crush_t", "lower_bound_s"])
+        w.writerows(rows)
     print(f"CSV saved: {csv_out}")
-
 
 if __name__ == "__main__":
     main()

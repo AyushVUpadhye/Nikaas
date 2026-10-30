@@ -35,6 +35,7 @@ class OptimiseRequest(BaseModel):
     building: dict
     blocked: list[str] = []
     simulate: bool = False  # also return the simulated run of the plan (one round trip for the website)
+    frame_every: float = 1.0  # frames in that run, as in /simulate (large buildings need 5 to fit a response)
 
 
 try:  # AWS Lambda entry point (template.yaml points at nikaas.api.handler)
@@ -98,7 +99,7 @@ def run_optimise(req: OptimiseRequest):
         b = load(req.building)
         out = optimise(b, set(req.blocked))
         if req.simulate:
-            run = simulate(b, out["plan"], set(req.blocked))
+            run = simulate(b, out["plan"], set(req.blocked), frame_every=max(0.25, req.frame_every))
             run["plan"] = out["plan"]
             out["run"] = run
     except (KeyError, ValueError) as e:

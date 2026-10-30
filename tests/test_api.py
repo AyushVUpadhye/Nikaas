@@ -53,3 +53,6 @@ def test_optimise_can_return_the_simulated_plan_in_one_call():
     b = json.loads((ROOT / "data/iit_kgp_museum.json").read_text(encoding="utf-8"))
     r = TestClient(app).post("/optimise", json={"building": b, "simulate": True}).json()
     assert r["run"]["total_time_s"] == r["total_time_s"] and r["run"]["frames"] and r["run"]["plan"] == r["plan"]
+    coarse = TestClient(app).post("/optimise", json={"building": b, "simulate": True, "frame_every": 5}).json()
+    assert coarse["run"]["total_time_s"] == r["total_time_s"]  # frames only change the sampling, not the result
+    assert len(coarse["run"]["frames"]) < len(r["run"]["frames"]) / 3
