@@ -21,3 +21,7 @@ simulator's model (edge capacity = width × specific flow from `nikaas/sim.py`).
 6. **"Beat Nikaas" score:** function that takes a judge's hand-made plan and returns its time and the gap to Nikaas.
 
 Fallback: if the LP is slow or wrong, keep greedy and use a simple bound: total people / total exit capacity + shortest walk.
+
+## Notes from Chirag (build lead)
+Newest at the bottom. Check this section after every `git pull`.
+- **11:47** — Use `simulate(b, plan, blocked)` from `nikaas/sim.py` to score any plan; `nearest_plan(b, blocked)` is your starting point. Return shape for `/optimise` is in `docs/CONTRACT.md`; Chirag wires the endpoint once `optimise()` is pushed.

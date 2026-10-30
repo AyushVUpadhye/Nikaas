@@ -15,3 +15,8 @@ Folder: `web/` (Vite + React + TypeScript, no UI kit). Style rules: `docs/VISUAL
 5. **`?demo=1`** plays saved frames with no backend; check it at 400 px wide too.
 
 Fallback: if 3D is not ready by 03:00, the 2D player is the demo.
+
+## Notes from Chirag (build lead)
+Newest at the bottom. Check this section after every `git pull`.
+- **11:47** — `/simulate` now returns `edge_load`: peak queue per edge (`"from-to": count`, busiest first). Use it to colour jammed corridors/stairs red; `bottleneck` is the worst one.
+- **11:47** — Until the API is deployed, use `data/frames_sample_nearest.json` and `data/frames_sample_blockedA.json` (real simulator output, same shape as the API).

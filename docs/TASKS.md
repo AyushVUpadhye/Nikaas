@@ -5,6 +5,7 @@ Read `docs/CONTRACT.md` first. Commit at least every hour (mandatory checkpoints
 small commits, clear messages, `git pull --rebase` before `git push`.
 
 Team rules
+- Messages from the build lead go in the **Notes from Chirag** section at the end of your task file. Check it after every `git pull`.
 - Code against the contract, not each other's code. Use the saved files in `data/` until the API is live.
 - Every number shown to judges comes from a script that writes to `runs/`. No made-up numbers.
 - Write everything fresh here. Do not copy code from earlier projects or from the concept video.

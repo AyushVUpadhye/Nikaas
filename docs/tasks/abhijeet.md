@@ -14,3 +14,8 @@ Part of Nikaas (AfterHours 1.0). Read first: `docs/CONTRACT.md` (shared data for
 6. **Pitch + video (07:30–09:00):** 3-minute pitch, rehearse twice with a timer; record the demo.
 
 Fallback: if Bedrock misreads the map, the hand-made JSON + editor is the demo and vision is shown as "assisted".
+
+## Notes from Chirag (build lead)
+Newest at the bottom. Check this section after every `git pull`.
+- **11:47** — The Lambda entry point is ready: set the SAM `Handler` to `nikaas.api.handler` (Mangum wraps the FastAPI app; `mangum` is in `requirements.txt`). Runtime `python3.11`.
+- **11:47** — Chirag's laptop has no AWS credentials yet. Set it up first so he can test deploys too.
