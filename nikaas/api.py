@@ -6,6 +6,7 @@ from fastapi.middleware.gzip import GZipMiddleware
 from pydantic import BaseModel
 
 from .building import load, nearest_plan, validate
+from .optimise import optimise
 from .sim import simulate
 
 app = FastAPI(title="Nikaas")
@@ -19,6 +20,11 @@ class SimRequest(BaseModel):
     plan: dict | None = None  # room -> exit; null = nearest open exit
     blocked: list[str] = []
     frame_every: float = 1.0  # seconds of simulated time between frames (bigger = smaller response)
+
+
+class OptimiseRequest(BaseModel):
+    building: dict
+    blocked: list[str] = []
 
 
 try:  # AWS Lambda entry point (template.yaml points at nikaas.api.handler)
@@ -56,4 +62,17 @@ def run(req: SimRequest):
     except (KeyError, ValueError) as e:
         raise HTTPException(422, str(e))
     out["plan"] = plan
+    return out
+
+
+@app.post("/optimise")
+def run_optimise(req: OptimiseRequest):
+    probs = validate(req.building)
+    if probs:
+        raise HTTPException(422, {"problems": probs})
+    try:
+        b = load(req.building)
+        out = optimise(b, set(req.blocked))
+    except (KeyError, ValueError) as e:
+        raise HTTPException(422, str(e))
     return out
