@@ -28,3 +28,4 @@
 - **13:02** Website: timeline scrubber (drag to any moment, pauses playback) and jammed corridors in red by peak queue (2D), ported from Bhumika's first version; browser-checked at 01:00 (229 out, 256 queuing).
 - **13:07** Reviewed Abhijeet: live `/vision` (photo -> building, ~20 s), exits-only pass, site on S3. Live API and S3 site are behind main (no `/optimise`, old web build); asked for redeploy. `/health` now lists the served routes so a stale deploy is visible. 39 tests pass.
 - **13:11** Responsive check (playbook): no horizontal scroll at 400, 1024 and 1440 px (scrollWidth <= innerWidth, 0 overflowing elements). Phones: compact controls moved the map up from 529 px to 433 px below the section top.
+- **13:16** Research: `docs/METHOD.md` states our times are movement times (RSET also has detection, alarm, pre-movement; SFPE Ch. 56, PD 7974-6:2019) and why the plan comparison is still fair. Landing FAQ updated.

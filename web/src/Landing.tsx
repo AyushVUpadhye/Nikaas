@@ -55,6 +55,10 @@ export default function Landing() {
 
       <details className="faq"><summary>Is the building real?</summary>
         <p>The floor plan is a real posted panel at IIT Kharagpur. Its scale, room occupancy and door widths are our assumptions, listed in the repository.</p></details>
+      <details className="faq"><summary>Is this the full evacuation time?</summary>
+        <p>No. Our times are movement times, the part an exit plan can change. A full escape time also includes detection,
+          alarm and the time people take to react before moving (SFPE Handbook; BSI PD 7974-6), which the plan does not change,
+          so we leave them out instead of guessing. Details: docs/METHOD.md.</p></details>
       <details className="faq"><summary>How do we know the times are right?</summary>
         <p>The simulator reproduces the SFPE Engineering Guide's Example 1 hand calculation; the test runs on every change.</p></details>
     </section>
