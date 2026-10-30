@@ -18,6 +18,8 @@ def test_drill_reroutes_rooms_when_their_exit_is_blocked():
     s2 = c.post("/drill", json={"building": B, "blocked": ["MAIN"]}).json()
     assert s2["version"] == s1["version"] + 1
     assert all(x["exit"] != "MAIN" for x in s2["rooms"].values())
+    assert "MAIN" in s2["exit_labels"] and "MAIN" in s2["blocked"]  # the sign by MAIN turns red
+    assert s2["instead"]["MAIN"] in s2["exit_labels"] and s2["instead"]["MAIN"] != "MAIN"  # and points elsewhere
     assert set(used_main) <= set(s2["changed"])  # every room that lost its exit gets an alert
     phone = c.get("/drill", params={"room": used_main[0], "since": s1["version"]}).json()
     assert phone["alert"] and phone["updated"] and phone["exit"] != "MAIN" and phone["blocked_labels"]

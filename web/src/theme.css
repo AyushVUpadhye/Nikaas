@@ -208,3 +208,15 @@ body.phone-mode { background: #fff; }
   .runner svg { animation: run .55s ease-in-out infinite alternate; } @keyframes run { from { transform: translateX(-6%) rotate(-4deg); } to { transform: translateX(6%) rotate(4deg); } }
 }
 @media (max-width: 760px) { .lh-copy { top: 18px; right: 16px; } .lh-hint { right: 16px; bottom: 88px; white-space: normal; width: calc(100% - 32px); justify-content: center; } .lh-live { left: 16px; } }
+
+/* live drill: a phone taped beside a door, a live exit sign */
+.sign { min-height: 100vh; display: grid; align-content: center; grid-template-columns: minmax(0, 1fr); justify-items: center; gap: 14px; padding: 24px; text-align: center; background: var(--exit); color: #fff; transition: background .3s; user-select: none; }
+.sign h1 { font-size: clamp(40px, 12vw, 96px); line-height: 1; color: #fff; }
+.sign p { font-size: 22px; margin: 0; opacity: .92; }
+.sign small { position: fixed; bottom: 14px; left: 0; right: 0; opacity: .7; font-size: 13px; }
+.sign-icon { width: min(56vw, 300px); aspect-ratio: 1; }
+.sign-icon svg { width: 100%; height: 100%; }
+.sign-fire { background: var(--alarm); }
+.sign-x { width: min(50vw, 260px); fill: none; stroke: #fff; stroke-width: 9; stroke-linecap: round; }
+.sign-go { font: 800 28px/1.2 var(--display); background: #fff; color: var(--alarm); padding: 12px 22px; border-radius: 999px; opacity: 1 !important; }
+@media (prefers-reduced-motion: no-preference) { .sign-fire .sign-x { animation: blink 1s steps(2) infinite; } @keyframes blink { 50% { opacity: .35; } } }

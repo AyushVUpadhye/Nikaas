@@ -6,6 +6,7 @@ import Challenge from './Challenge.tsx'
 import Evidence from './Evidence.tsx'
 import Drill from './Drill.tsx'
 import Phone from './Phone.tsx'
+import Sign from './Sign.tsx'
 
 // Hash routes so the site works from a plain S3 bucket with no server rewrites.
 const PAGES: Record<string, { label: string; render: () => React.ReactElement }> = {
@@ -32,6 +33,7 @@ export default function Shell() {
     return () => clearTimeout(t)
   }, [])
   if (route === 'me') return <Phone /> // the judge's phone: no site chrome
+  if (route === 'sign') return <Sign /> // a phone taped beside a door: a live exit sign
   const page = PAGES[route] ?? PAGES['']
   return (
     <>

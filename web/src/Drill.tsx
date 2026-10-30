@@ -41,6 +41,7 @@ export default function Drill() {
           <p className="lede">Scan with your phone and choose the room you are in. Your phone shows your own way out, and changes it the moment an exit is blocked.</p>
           <div className="drill-qr" dangerouslySetInnerHTML={{ __html: qr }} aria-label={`QR code for ${phoneUrl}`} />
           <p className="sources">{phoneUrl}</p>
+          <p className="sources">Phones taped beside the doors become live exit signs: open {phoneUrl.replace('#/me', '#/sign')}</p>
         </div>
         <div className="drill-panel">
           {!state ? (

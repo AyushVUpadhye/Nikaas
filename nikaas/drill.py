@@ -77,7 +77,11 @@ def start(building: dict, blocked: list[str], previous: dict | None = None) -> d
         "blocked_labels": [b.nodes[x].get("label", x) for x in sorted(blocked_set)],
         "total_time_s": opt["total_time_s"],
         "room_labels": {r: b.nodes[r].get("label", r) for r in b.rooms},
+        "exit_labels": {x: b.nodes[x].get("label", x) for x in b.exits},  # for the phones taped by each door
         "rooms": rooms,
+        # the sign at a blocked door points to the open exit with the shortest walk from that door
+        "instead": {x: min((shortest_path(b, x, y, blocked_set)[0], y) for y in b.exits if y not in blocked_set)[1]
+                    for x in sorted(blocked_set) if len(blocked_set) < len(b.exits)},
         "changed": changed,  # rooms whose exit just changed: their phones alert
         # small map for the phones: node positions/sizes and walkways (a few KB)
         "map": {"nodes": [[n["id"], n["type"], n["x"], n["z"], n.get("w", 0), n.get("d", 0)] for n in building["nodes"]],
