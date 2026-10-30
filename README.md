@@ -8,7 +8,7 @@
 - **Validated against SFPE Handbook Example 1**: 245.25 s vs the published 245.2 s (0.05 s error, `tests/test_sim.py`).
 - **Crowd mode (in progress, not built yet)**: will flag corridors above the crowd-density thresholds researched in `docs/CROWD_RESEARCH.md`.
 
-Live site: *(Abhijeet's URL — fill before submission)* · Demo video: *(fill before submission)*
+Live site: **http://nikaas-webbucket-hbkfctr0cw8s.s3-website.ap-south-1.amazonaws.com** (Home, Twin, Beat Nikaas, Evidence) · API: https://4kzez16ucj.execute-api.ap-south-1.amazonaws.com/health · Demo video: *(fill before submission)*
 
 ---
 

@@ -87,3 +87,4 @@ Newest at the bottom. Check this section after every `git pull`.
   switch to "Nikaas plan" → Evidence page → back to Home. Make the frame with ffmpeg: record the page at 1440×788 ×2 with
   Playwright, then `overlay` it on a gradient image with rounded corners. Keep it ≤ 26 s.
 - **14:03** — Your PR #1 merge re-added `web/src/components/` and `web/src/types.ts`, which **broke the website build** (they need npm three.js, which the venue blocks). They are already kept in `web/legacy-bhumika/`, so I removed the duplicates. **Please do not merge or push anything under `web/src`.** I also corrected the README status: the optimiser UI is built, and Crowd mode is "in progress" until the density fix lands.
+- **14:15** — The live site is up and current: http://nikaas-webbucket-hbkfctr0cw8s.s3-website.ap-south-1.amazonaws.com (put it in the README, done, and use it for the showcase film so judges see the real thing).

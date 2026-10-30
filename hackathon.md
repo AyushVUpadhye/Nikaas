@@ -45,3 +45,4 @@
 - **14:03** Abhijeet: \`/optimise\` live on Lambda (verified 124.0 s, 2.9 s). Ayush: vision graph QA pushed. Bhumika's PR #1 merge broke the web build (old components back in \`web/src\`); removed duplicates (kept in \`web/legacy-bhumika\`), README status corrected.
 - **14:05** Wired Ayush's `/qa` graph check into the Twin's photo-read banner (Nova Pro graph 88/100). Suggested an exit-capacity check. `?demo=1` re-verified with the new pages.
 - **14:10** Live website Nikaas plan verified on AWS (7.1 s, 21.3 s faster). `/optimise` now takes `simulate: true` and returns the simulated plan in one call (website falls back if the deployment is older).
+- **14:15** Public site verified end to end on AWS: redesign live on S3, Nikaas plan 3.6 s (21.3 s faster), Beat Nikaas live. README now links the live site and API.
