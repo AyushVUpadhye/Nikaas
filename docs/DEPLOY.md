@@ -11,10 +11,15 @@ The API is `nikaas/api.py` as-is: same routes as local, CORS open, gzip on.
 
 | Route | What |
 |---|---|
-| `GET /health` | `{"ok": true}` |
+| `GET /health` | `{"ok": true, "routes": [...]}` |
 | `POST /validate` | see `docs/CONTRACT.md` |
 | `POST /simulate` | see `docs/CONTRACT.md` |
-| `POST /vision` | photo of a floor plan → building graph. Takes ~20 s. |
+| `POST /optimise` | best exit plan + lower bound (`nikaas/optimise.py`). ~2 s museum, ~8 s lab block. |
+| `POST /beat` | time a hand-made `plan` against the optimiser ("Beat Nikaas"). ~3 s. |
+| `POST /qa` | graph quality score and warnings (`nikaas/graph_qa.py`). <1 s. |
+| `POST /vision` | photo of a floor plan → building graph (+ `quality`). ~20 s. |
+
+Last checked live on 30 Oct 14:15 IST: all routes 200, museum `/simulate` 145.25 s, `/optimise` 124.0 s.
 
 ### `POST /vision`
 
