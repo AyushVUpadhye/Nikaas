@@ -176,6 +176,7 @@ export default function View3D({ building, frame, blocked, routes, onExit }: Pro
     for (const paths of Object.values(routes ?? {})) for (const path of paths) {
       for (let k = 1; k < path.length; k++) {
         const a = byId[path[k - 1]], b = byId[path[k]]
+        if (!a || !b) continue // run from another building: skip
         const len = Math.hypot(b.x - a.x, b.z - a.z)
         if (len < 0.01) continue
         const r = new THREE.Mesh(new THREE.PlaneGeometry(len, 0.35), m)

@@ -12,7 +12,13 @@ type Run = {
 // Live API (AWS). Without it the page falls back to saved runs, so ?demo=1 and offline demos still work.
 const API = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, '') ?? ''
 const DEMO = new URLSearchParams(location.search).has('demo')
-const SAVED: Record<string, string> = { '': 'data/frames_iit_kgp_nearest.json', MAIN: 'data/frames_iit_kgp_blockedMAIN.json' }
+// Two versions of the same building: digitised by hand, and read from the photo by Amazon Nova Pro (nikaas/vision.py)
+const SOURCES = [
+  { id: 'hand', label: 'Hand-digitised', file: 'data/iit_kgp_museum.json',
+    saved: { '': 'data/frames_iit_kgp_nearest.json', MAIN: 'data/frames_iit_kgp_blockedMAIN.json' } as Record<string, string> },
+  { id: 'vision', label: 'Read from the photo (Amazon Nova Pro)', file: 'data/vision_nova_pro.json',
+    saved: { '': 'data/frames_vision_nova_pro_nearest.json' } as Record<string, string> },
+]
 
 const STATE_VAR: Record<string, string> = { walking: '--walk', queuing: '--queue', stairs: '--stairs', inside: '--inside' }
 const LEGEND: [string, string, string][] = [
@@ -22,7 +28,7 @@ const LEGEND: [string, string, string][] = [
 const fmt = (s: number) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(Math.floor(s % 60)).padStart(2, '0')}`
 const cssVar = (v: string) => getComputedStyle(document.documentElement).getPropertyValue(v).trim()
 
-async function fetchRun(building: Building, blocked: string[]): Promise<Run> {
+async function fetchRun(building: Building, blocked: string[], SAVED: Record<string, string>): Promise<Run> {
   const key = blocked.slice().sort().join('+')
   if ((!API || DEMO) && key in SAVED) return (await fetch(SAVED[key])).json()
   if (!API) throw new Error('This scenario needs the live API (set VITE_API_URL).')
@@ -36,6 +42,7 @@ async function fetchRun(building: Building, blocked: string[]): Promise<Run> {
 
 export default function App() {
   const [building, setBuilding] = useState<Building>()
+  const [source, setSource] = useState(SOURCES[0])
   const [blocked, setBlocked] = useState<string[]>([])
   const [run, setRun] = useState<Run>()
   const [baseline, setBaseline] = useState<number>()
@@ -46,12 +53,12 @@ export default function App() {
   const [mode3d, setMode3d] = useState(true)
   const canvas = useRef<HTMLCanvasElement>(null)
 
-  useEffect(() => { fetch('data/iit_kgp_museum.json').then(r => r.json()).then(setBuilding) }, [])
+  useEffect(() => { setBuilding(undefined); setRun(undefined); setBlocked([]); setBaseline(undefined); fetch(source.file).then(r => r.json()).then(setBuilding) }, [source])
   useEffect(() => {
     if (!building) return
     let live = true
     setRun(undefined); setError(''); setI(0)
-    fetchRun(building, blocked)
+    fetchRun(building, blocked, source.saved)
       .then(r => { if (live) { setRun(r); if (!blocked.length) setBaseline(r.total_time_s) } })
       .catch(e => live && setError(String(e.message ?? e)))
     return () => { live = false }
@@ -123,6 +130,7 @@ export default function App() {
     // escape routes: one ribbon per door of each room, to its assigned exit
     g.strokeStyle = cssVar('--route'); g.globalAlpha = 0.55; g.lineWidth = 3
     for (const paths of Object.values(run?.door_routes ?? {})) for (const path of paths) {
+      if (!path.every(id => byId[id])) continue // run from another building: skip
       g.beginPath(); path.forEach((id, k) => { const [x, z] = P(byId[id].x, byId[id].z); if (k) g.lineTo(x, z); else g.moveTo(x, z) }); g.stroke()
     }
     g.globalAlpha = 1
@@ -159,6 +167,17 @@ export default function App() {
       </header>
       <p style={{ color: 'var(--muted)', margin: '6px 0 16px' }}>{building?.name}</p>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 12 }}>
+        <span style={{ color: 'var(--muted)' }}>Building:</span>
+        {SOURCES.map(src => <button key={src.id} className={src.id === source.id ? 'on' : ''} onClick={() => setSource(src)}>{src.label}</button>)}
+      </div>
+      {source.id === 'vision' && building && (
+        <div style={{ background: '#fff8e6', border: '1px solid #e8c56a', padding: '8px 12px', marginBottom: 12, fontSize: 14 }}>
+          Read from the photo in one model call: {building.nodes.filter(n => n.type === 'room').length} rooms and{' '}
+          {exits.length} exit{exits.length === 1 ? '' : 's'} found. Missing exits make everyone queue at one door, so exits need a
+          human check before the times are trusted (hand-digitised: 3 exits). Details: <code>runs/vision_check.md</code>.
+        </div>
+      )}
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 12 }}>
         <span style={{ color: 'var(--muted)' }}>Block an exit (tap it on the map):</span>
         {exits.map(n => <button key={n.id} className={blocked.includes(n.id) ? 'on' : ''} onClick={() => toggleExit(n.id)}>{n.label ?? n.id}</button>)}
         {blocked.length > 0 && <button onClick={() => setBlocked([])}>Reset</button>}
@@ -177,7 +196,7 @@ export default function App() {
             ? <View3D building={building} frame={f} blocked={blocked} routes={run?.door_routes} onExit={toggleExit} />
             : <canvas ref={canvas} width={1000} height={560} onClick={onCanvasClick}
                 style={{ width: '100%', background: 'var(--card)', border: '1px solid var(--line)', cursor: 'pointer' }} />}
-          {!run && !error && <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', color: 'var(--muted)' }}>Simulating 507 people…</div>}
+          {!run && !error && <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', color: 'var(--muted)' }}>Simulating {building?.nodes.reduce((n, x) => n + ((x as { people?: number }).people ?? 0), 0) ?? ''} people…</div>}
         </div>
         <aside style={{ background: 'var(--card)', border: '1px solid var(--line)', padding: 16 }}>
           <div style={{ fontFamily: 'var(--serif)', fontSize: 56, lineHeight: 1 }}>{fmt(f?.t ?? 0)}</div>
