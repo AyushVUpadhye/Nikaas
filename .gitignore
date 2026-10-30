@@ -3,5 +3,7 @@ __pycache__/
 .venv/
 node_modules/
 .pytest_cache/
+dist/
 web/dist/
 web/.env
+.aws-sam/

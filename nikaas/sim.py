@@ -11,9 +11,26 @@ from dataclasses import dataclass
 
 from .building import Building, shortest_path
 
-WALK_SPEED = 1.19  # m/s, unimpeded horizontal walking (SFPE)
-STAIR_SPEED = 0.85  # m/s along the stair slope (SFPE, typical riser/tread)
-SPECIFIC_FLOW = {"corridor": 1.3, "door": 1.3, "stair": 1.1}  # persons / s / m of clear width (SFPE max)
+FT = 0.3048  # metres per foot
+# Values from the SFPE hydraulic model as used in SFPE Engineering Guide Example 1 (worked in
+# Thunderhead Pathfinder docs, "SFPE Example 1", verified 30 Oct 2026) and the SFPE Handbook chapter
+# "Employing the Hydraulic Model in Assessing Emergency Movement" (Gwynne & Rosenbaum).
+WALK_SPEED = 3.9 * FT  # 1.19 m/s unimpeded horizontal speed
+STAIR_SPEED = 0.85 * 212 * FT / 60  # 0.915 m/s along a 7/11 in stair at maximum flow
+SPECIFIC_FLOW = {  # persons / s / metre of EFFECTIVE width
+    "door": 24 / 60 / FT,  # 1.312
+    "corridor": 24 / 60 / FT,  # 1.312
+    "stair": 18.5 / 60 / FT,  # 1.012, 7/11 in stair
+}
+# boundary layer removed from EACH side of the clear width. Door jamb 6 in (SFPE Example 1, verified).
+# Stair and corridor walls: SFPE table values as commonly quoted (15 cm, 20 cm) - see docs/QUESTIONS.md.
+BOUNDARY = {"door": 6 * 0.0254, "stair": 0.15, "corridor": 0.20}
+
+
+def effective_width(e):
+    return max(0.3, e.width - 2 * BOUNDARY[e.kind])
+
+
 DT = 0.25  # s
 
 
@@ -32,6 +49,22 @@ class Person:
     t_out: float = math.nan
 
 
+def door_paths(b: Building, room, ex, blocked=()):
+    """Every door of `room` that can still reach exit `ex`: [(door width, path room -> ... -> ex)].
+    A path never goes back through the room (people leave by the door they are nearest to)."""
+    out = []
+    for nb, e in b.adj[room]:
+        if nb == ex:
+            out.append((e.width, [room, ex]))
+            continue
+        if nb in blocked:
+            continue
+        d, rest = shortest_path(b, nb, ex, set(blocked) | {room})
+        if rest:
+            out.append((e.width, [room] + rest))
+    return out
+
+
 def simulate(b: Building, plan: dict, blocked=(), seed=7, max_t=1800.0, frame_every=1.0, premove=(0.0, 0.0)):
     """Run one evacuation. plan: room -> exit. Returns a dict in the API contract shape."""
     rng = random.Random(seed)
@@ -40,23 +73,30 @@ def simulate(b: Building, plan: dict, blocked=(), seed=7, max_t=1800.0, frame_ev
     for e in b.edges:
         edge_of[(e.a, e.b)] = e
         edge_of[(e.b, e.a)] = e
-    people, pid, routes = [], 0, {}
+    people, pid, routes, door_routes = [], 0, {}, {}
     for room, n in b.people().items():
         ex = plan[room]
         if ex in blocked:
             raise ValueError(f"plan sends {room} to blocked exit {ex}")
-        _, path = shortest_path(b, room, ex, blocked)
-        if not path:
+        doors = door_paths(b, room, ex, blocked)
+        if not doors:
             raise ValueError(f"no route from {room} to {ex}")
-        routes[room] = path
+        door_routes[room] = [path for _, path in doors]
+        routes[room] = max(doors, key=lambda d: d[0])[1]  # widest door's route (kept for the UI contract)
         node = b.nodes[room]
-        for _ in range(n):
-            people.append(Person(pid, room, ex, path, start=rng.uniform(*premove),
-                                 ox=(rng.random() - .5) * node.get("w", 4) * .8,
-                                 oz=(rng.random() - .5) * node.get("d", 4) * .8))
-            pid += 1
+        total_w = sum(w for w, _ in doors)
+        # occupants split across the room's usable doors in proportion to door width
+        counts = [int(n * w / total_w) for w, _ in doors]
+        for i in range(n - sum(counts)):
+            counts[i % len(counts)] += 1
+        for (_, path), k in zip(doors, counts):
+            for _ in range(k):
+                people.append(Person(pid, room, ex, path, start=rng.uniform(*premove),
+                                     ox=(rng.random() - .5) * node.get("w", 4) * .8,
+                                     oz=(rng.random() - .5) * node.get("d", 4) * .8))
+                pid += 1
 
-    cap = {e.key: e.width * SPECIFIC_FLOW[e.kind] for e in b.edges}  # persons / s
+    cap = {e.key: effective_width(e) * SPECIFIC_FLOW[e.kind] for e in b.edges}  # persons / s
     credit = {k: 0.0 for k in cap}
     queues = {k: [] for k in cap}  # FIFO of person ids waiting to enter the edge
     peak_q = {k: 0 for k in cap}
@@ -64,9 +104,19 @@ def simulate(b: Building, plan: dict, blocked=(), seed=7, max_t=1800.0, frame_ev
     frames, t, next_frame = [], 0.0, 0.0
 
     def pos(p):
-        if p.state == "inside":
+        if p.state == "inside" or (p.state == "queuing" and p.leg == 0):
+            # still in the room: spread over the room floor, drifting toward the door while queuing
             n = b.nodes[p.room]
-            return n["x"] + p.ox, n["z"] + p.oz
+            k = 0.45 if p.state == "queuing" else 1.0
+            door = b.nodes[p.path[1]]
+            x, z = n["x"] + p.ox * k, n["z"] + p.oz * k
+            if p.state == "queuing":
+                x, z = x + (door["x"] - x) * 0.35, z + (door["z"] - z) * 0.35
+            return x, z
+        if p.state == "queuing":
+            # waiting in front of a corridor junction or stair: small cluster, not one point
+            a = b.nodes[p.path[p.leg]]
+            return a["x"] + p.ox * 0.15, a["z"] + p.oz * 0.15
         a, c = b.nodes[p.path[p.leg]], b.nodes[p.path[min(p.leg + 1, len(p.path) - 1)]]
         e = edge_of[(p.path[p.leg], p.path[min(p.leg + 1, len(p.path) - 1)])] if p.leg + 1 < len(p.path) else None
         f = 0.0 if not e else min(1.0, p.s / e.length)
@@ -124,6 +174,7 @@ def simulate(b: Building, plan: dict, blocked=(), seed=7, max_t=1800.0, frame_ev
         "bottleneck": bottleneck,
         "peak_queue": peak_q.get(bottleneck, 0) if bottleneck else 0,
         "edge_load": {k: v for k, v in sorted(peak_q.items(), key=lambda kv: -kv[1])},  # peak queue per edge, busiest first
-        "routes": routes,  # room -> [node ids] to its exit, for drawing escape ribbons
+        "routes": routes,  # room -> [node ids] to its exit (widest door), for drawing escape ribbons
+        "door_routes": door_routes,  # room -> one path per usable door
         "frames": frames,
     }

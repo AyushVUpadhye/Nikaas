@@ -1,0 +1,66 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: Nikaas - evacuation planner API (Lambda + HTTP API) and web hosting (S3)
+
+Globals:
+  Function:
+    Timeout: 29 # HTTP API gives up after 30 s
+    MemorySize: 1024
+    Runtime: python3.11
+    Architectures: [x86_64]
+
+Resources:
+  # FastAPI app (nikaas/api.py) wrapped by Mangum. Every path and method goes to it.
+  ApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: nikaas.api.handler
+      Environment:
+        Variables:
+          # Bedrock is called in us-east-1 until ap-south-1 access is verified
+          BEDROCK_REGION: us-east-1
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: [bedrock:InvokeModel] # also covers the Converse API
+              Resource: "*"
+      Events:
+        Api:
+          Type: HttpApi # no Path = catch-all $default route; FastAPI does routing and CORS
+
+  # Static web build (Vite `dist/`). Upload with:
+  #   aws s3 sync web/dist s3://<WebBucketName> --delete
+  WebBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: index.html # single-page app: unknown paths load the app
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: false
+        RestrictPublicBuckets: false
+
+  WebBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref WebBucket
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal: "*"
+            Action: s3:GetObject
+            Resource: !Sub "${WebBucket.Arn}/*"
+
+Outputs:
+  ApiUrl:
+    Description: Public API URL (try /health)
+    Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.amazonaws.com"
+  WebUrl:
+    Description: Public website URL
+    Value: !GetAtt WebBucket.WebsiteURL
+  WebBucketName:
+    Description: Bucket to upload the web build to
+    Value: !Ref WebBucket
