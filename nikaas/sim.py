@@ -32,6 +32,22 @@ class Person:
     t_out: float = math.nan
 
 
+def door_paths(b: Building, room, ex, blocked=()):
+    """Every door of `room` that can still reach exit `ex`: [(door width, path room -> ... -> ex)].
+    A path never goes back through the room (people leave by the door they are nearest to)."""
+    out = []
+    for nb, e in b.adj[room]:
+        if nb == ex:
+            out.append((e.width, [room, ex]))
+            continue
+        if nb in blocked:
+            continue
+        d, rest = shortest_path(b, nb, ex, set(blocked) | {room})
+        if rest:
+            out.append((e.width, [room] + rest))
+    return out
+
+
 def simulate(b: Building, plan: dict, blocked=(), seed=7, max_t=1800.0, frame_every=1.0, premove=(0.0, 0.0)):
     """Run one evacuation. plan: room -> exit. Returns a dict in the API contract shape."""
     rng = random.Random(seed)
@@ -40,21 +56,28 @@ def simulate(b: Building, plan: dict, blocked=(), seed=7, max_t=1800.0, frame_ev
     for e in b.edges:
         edge_of[(e.a, e.b)] = e
         edge_of[(e.b, e.a)] = e
-    people, pid, routes = [], 0, {}
+    people, pid, routes, door_routes = [], 0, {}, {}
     for room, n in b.people().items():
         ex = plan[room]
         if ex in blocked:
             raise ValueError(f"plan sends {room} to blocked exit {ex}")
-        _, path = shortest_path(b, room, ex, blocked)
-        if not path:
+        doors = door_paths(b, room, ex, blocked)
+        if not doors:
             raise ValueError(f"no route from {room} to {ex}")
-        routes[room] = path
+        door_routes[room] = [path for _, path in doors]
+        routes[room] = max(doors, key=lambda d: d[0])[1]  # widest door's route (kept for the UI contract)
         node = b.nodes[room]
-        for _ in range(n):
-            people.append(Person(pid, room, ex, path, start=rng.uniform(*premove),
-                                 ox=(rng.random() - .5) * node.get("w", 4) * .8,
-                                 oz=(rng.random() - .5) * node.get("d", 4) * .8))
-            pid += 1
+        total_w = sum(w for w, _ in doors)
+        # occupants split across the room's usable doors in proportion to door width
+        counts = [int(n * w / total_w) for w, _ in doors]
+        for i in range(n - sum(counts)):
+            counts[i % len(counts)] += 1
+        for (_, path), k in zip(doors, counts):
+            for _ in range(k):
+                people.append(Person(pid, room, ex, path, start=rng.uniform(*premove),
+                                     ox=(rng.random() - .5) * node.get("w", 4) * .8,
+                                     oz=(rng.random() - .5) * node.get("d", 4) * .8))
+                pid += 1
 
     cap = {e.key: e.width * SPECIFIC_FLOW[e.kind] for e in b.edges}  # persons / s
     credit = {k: 0.0 for k in cap}
@@ -124,6 +147,7 @@ def simulate(b: Building, plan: dict, blocked=(), seed=7, max_t=1800.0, frame_ev
         "bottleneck": bottleneck,
         "peak_queue": peak_q.get(bottleneck, 0) if bottleneck else 0,
         "edge_load": {k: v for k, v in sorted(peak_q.items(), key=lambda kv: -kv[1])},  # peak queue per edge, busiest first
-        "routes": routes,  # room -> [node ids] to its exit, for drawing escape ribbons
+        "routes": routes,  # room -> [node ids] to its exit (widest door), for drawing escape ribbons
+        "door_routes": door_routes,  # room -> one path per usable door
         "frames": frames,
     }

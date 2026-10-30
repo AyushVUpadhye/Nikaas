@@ -81,3 +81,23 @@ def test_api_returns_edge_load_and_lambda_handler_exists():
     r = TestClient(api.app).post("/simulate", json={"building": b})
     assert r.status_code == 200 and r.json()["edge_load"]
     assert api.handler is not None
+
+
+def test_room_with_two_doors_uses_both():
+    # 100 people, two equal 1 m doors onto the same corridor: both doors carry ~half,
+    # so the room empties about twice as fast as through one door.
+    two = load({"nodes": [{"id": "r", "type": "room", "x": 0, "z": 0, "people": 100, "w": .1, "d": .1},
+                          {"id": "c1", "type": "corridor", "x": 2, "z": -1}, {"id": "c2", "type": "corridor", "x": 2, "z": 1},
+                          {"id": "X", "type": "exit", "x": 10, "z": 0}],
+                "edges": [{"from": "r", "to": "c1", "width": 1}, {"from": "r", "to": "c2", "width": 1},
+                          {"from": "c1", "to": "X", "width": 5}, {"from": "c2", "to": "X", "width": 5}]})
+    one = load({"nodes": two_nodes_one_door(), "edges": [{"from": "r", "to": "c1", "width": 1}, {"from": "c1", "to": "X", "width": 5}]})
+    t2 = simulate(two, {"r": "X"})
+    t1 = simulate(one, {"r": "X"})
+    assert len(t2["door_routes"]["r"]) == 2
+    assert t2["total_time_s"] < 0.6 * t1["total_time_s"]
+
+
+def two_nodes_one_door():
+    return [{"id": "r", "type": "room", "x": 0, "z": 0, "people": 100, "w": .1, "d": .1},
+            {"id": "c1", "type": "corridor", "x": 2, "z": -1}, {"id": "X", "type": "exit", "x": 10, "z": 0}]
