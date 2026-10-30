@@ -13,6 +13,7 @@ from pydantic import BaseModel
 
 from .building import load, nearest_plan, validate
 from .crowd import analyse as crowd_analyse
+from .graph_qa import analyze_graph
 from .optimise import beat_nikaas_score, optimise
 from .sim import simulate
 
@@ -58,6 +59,12 @@ class BuildingRequest(BaseModel):
 def check(req: BuildingRequest):
     probs = validate(req.building)
     return {"ok": not probs, "problems": probs}
+
+
+@app.post("/qa")
+def graph_qa(req: BuildingRequest):
+    """Evaluate structural, topological, and geometric graph quality."""
+    return analyze_graph(req.building)
 
 
 @app.post("/simulate")
@@ -151,7 +158,8 @@ def vision(req: VisionRequest):
         save(f"results/{rid}.json", json.dumps({"building": building, "problems": probs}), "application/json")
     except Exception:  # storage is for our records; never fail the user's request over it
         stored = None
-    return {"ok": not probs, "id": rid, "building": building, "problems": probs, "photo_key": stored}
+    qa_report = building.get("vision", {}).get("qa") or analyze_graph(building)
+    return {"ok": not probs, "id": rid, "building": building, "problems": probs, "quality": qa_report, "photo_key": stored}
 
 
 class BeatRequest(BaseModel):
