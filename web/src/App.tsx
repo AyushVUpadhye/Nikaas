@@ -65,6 +65,8 @@ export default function App() {
   const [speed, setSpeed] = useState(4)
   const [mode3d, setMode3d] = useState(true)
   const [plan, setPlan] = useState<'nearest' | 'nikaas'>('nearest')
+  const [qa, setQa] = useState<{ score: number; status: string; warnings: { severity: string; message: string }[] }>()
+  useEffect(() => { fetch('data/vision_nova_pro_qa.json').then(r => r.json()).then(setQa).catch(() => {}) }, [])
   const canvas = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => { setBuilding(undefined); setRun(undefined); setBlocked([]); setBaseline(undefined); fetch(source.file).then(r => r.json()).then(setBuilding) }, [source])
@@ -189,6 +191,10 @@ export default function App() {
           Read from the photo in one model call: {building.nodes.filter(n => n.type === 'room').length} rooms and{' '}
           {exits.length} exit{exits.length === 1 ? '' : 's'} found. Missing exits make everyone queue at one door, so exits need a
           human check before the times are trusted (hand-digitised: 3 exits). Details: <code>runs/vision_check.md</code>.
+          {qa && <div style={{ marginTop: 6 }}>
+            Graph check (<code>/qa</code>): score {qa.score} of 100, {qa.status}.{' '}
+            {qa.warnings.filter(w => w.severity === 'warning').slice(0, 2).map(w => w.message).join(' ')}
+          </div>}
         </div>
       )}
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 12 }}>

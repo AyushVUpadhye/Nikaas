@@ -1,0 +1,36 @@
+{
+ "status": "warning",
+ "score": 88.0,
+ "warnings": [
+  {
+   "code": "SUSPICIOUS_DOOR_LENGTH",
+   "severity": "warning",
+   "message": "Door link between 'rail_transport_in_india' and 'p8' spans 13.7 m from room boundary, exceeding standard doorway bounds.",
+   "elements": [
+    "rail_transport_in_india",
+    "p8"
+   ],
+   "suggestion": "Change link between 'rail_transport_in_india' and 'p8' to 'corridor' or add intermediate corridor points."
+  },
+  {
+   "code": "SUSPICIOUS_DOOR_LENGTH",
+   "severity": "warning",
+   "message": "Door link between 'drinking_water' and 'p14' spans 6.3 m from room boundary, exceeding standard doorway bounds.",
+   "elements": [
+    "drinking_water",
+    "p14"
+   ],
+   "suggestion": "Change link between 'drinking_water' and 'p14' to 'corridor' or add intermediate corridor points."
+  },
+  {
+   "code": "DEAD_END_CORRIDOR",
+   "severity": "info",
+   "message": "Corridor node 'p9' is a dead-end with only 1 connection.",
+   "elements": [
+    "p9"
+   ],
+   "suggestion": "Verify if walkway at 'p9' extends to adjacent spaces."
+  }
+ ],
+ "repair_suggestions": []
+}
