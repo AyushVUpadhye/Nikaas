@@ -26,3 +26,4 @@ Fallback: if the LP is slow or wrong, keep greedy and use a simple bound: total 
 Newest at the bottom. Check this section after every `git pull`.
 - **11:47** — Use `simulate(b, plan, blocked)` from `nikaas/sim.py` to score any plan; `nearest_plan(b, blocked)` is your starting point. Return shape for `/optimise` is in `docs/CONTRACT.md`; Chirag wires the endpoint once `optimise()` is pushed.
 - **12:00** — Optimise on `data/lab_block.json`: nearest exit sends 264 people to the narrow west stair A (1.2 m) and only 194 to the wide main stair B (2.0 m), 211.75 s total (`runs/results.csv`). That imbalance is what your plan should fix.
+- **12:05** — Optimise on `data/iit_kgp_museum.json`. Nearest exit: 112.75 s, bottleneck is the Audiovisual Hall's west door (120 people queue at one 1.2 m door while the hall's second door is unused). Blocking MAIN: 242.75 s. Note: a room with two doors needs per-door splitting; plan format can stay room -> exit for now.

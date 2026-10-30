@@ -48,3 +48,10 @@ def test_api_rejects_invalid_building_with_reasons():
     r = c.post("/simulate", json={"building": bad})
     assert r.status_code == 422 and "building has no exit" in r.json()["detail"]["problems"]
     assert c.post("/validate", json={"building": GOOD}).json() == {"ok": True, "problems": []}
+
+
+def test_digitised_iit_kgp_plan_is_valid_and_credited():
+    d = json.loads((ROOT / "data/iit_kgp_museum.json").read_text(encoding="utf-8"))
+    assert validate(d) == []
+    assert d["source"]["license"] == "CC BY 3.0" and d["source"]["author"]
+    assert (ROOT / d["source"]["photo"]).exists()

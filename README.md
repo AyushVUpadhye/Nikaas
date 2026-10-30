@@ -10,6 +10,14 @@ Twins, by **TheGoodEngineers** (team AH50): Ayush V U, Bhumika G, Abhijeet, Chir
 > Status: in progress during the hackathon. Every number in this README will come from a file in
 > `runs/`. If a number has no file behind it, it is not here.
 
+## Demo building
+A real posted floor-plan panel: **Nehru Museum of Science & Technology, Block B, IIT Kharagpur**,
+digitised into `data/iit_kgp_museum.json` (`scripts/make_iit_kgp.py`; overlay check in
+`data/maps/iit_kgp_overlay.jpg`). Scale, occupancy and exit widths are our assumptions (`docs/QUESTIONS.md`).
+
+Photo: "Floor Plan Panel - NMST - IIT Kharagpur" by Biswarup Ganguly, CC BY 3.0, via Wikimedia Commons
+(https://commons.wikimedia.org/wiki/File:Floor_Plan_Panel_-_NMST_-_IIT_Kharagpur_-_West_Midnapore_2015-09-28_4616.JPG).
+
 ## Run locally
 ```
 pip install -r requirements.txt
