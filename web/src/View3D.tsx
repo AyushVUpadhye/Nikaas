@@ -13,6 +13,8 @@ type Props = {
   blocked: string[]
   routes?: Record<string, string[][]>
   edgeLoad?: Record<string, number>
+  bottleneck?: string
+  peakQueue?: number
   onExit: (id: string) => void
 }
 
@@ -21,7 +23,7 @@ type Props = {
 const WALL_H = 1.3, WALL_T = 0.18
 const STATE_COLOR: Record<string, string> = { walking: '#f26a2e', queuing: '#c81e1e', stairs: '#2563eb', inside: '#8a939b' }
 
-export default function View3D({ building, frame, blocked, routes, edgeLoad, onExit }: Props) {
+export default function View3D({ building, frame, blocked, routes, edgeLoad, bottleneck, peakQueue, onExit }: Props) {
   const host = useRef<HTMLDivElement>(null)
   const api = useRef<any>({})
 
@@ -129,6 +131,13 @@ export default function View3D({ building, frame, blocked, routes, edgeLoad, onE
     scene.add(body, head)
 
     const routeGroup = new THREE.Group(); scene.add(routeGroup)
+    // bottleneck marker: pulsing red ring on the floor + a floating label, moved to the worst jam per run
+    const marker = new THREE.Group(); marker.visible = false; scene.add(marker)
+    const ring = new THREE.Mesh(new THREE.RingGeometry(2.2, 2.7, 48), new THREE.MeshBasicMaterial({ color: '#c81e1e', transparent: true, opacity: 0.85, side: THREE.DoubleSide, depthWrite: false }))
+    ring.rotation.x = -Math.PI / 2; ring.position.y = 0.07; marker.add(ring)
+    const tagCanvas = document.createElement('canvas'); tagCanvas.width = 512; tagCanvas.height = 128
+    const tagTex = new THREE.CanvasTexture(tagCanvas); tagTex.colorSpace = THREE.SRGBColorSpace
+    const tag = new THREE.Sprite(new THREE.SpriteMaterial({ map: tagTex, depthTest: false })); tag.scale.set(13, 3.25, 1); tag.position.y = 5.5; marker.add(tag)
 
     const camera = new THREE.PerspectiveCamera(35, W / H, 0.5, span * 6)
     camera.position.set(cx + span * 0.05, span * 0.8, cz + span * 0.95)
@@ -168,6 +177,7 @@ export default function View3D({ building, frame, blocked, routes, edgeLoad, onE
         }
         body.instanceMatrix.needsUpdate = true; head.instanceMatrix.needsUpdate = true
       }
+      if (marker.visible) { const k = 1 + 0.12 * Math.sin(now / 250); ring.scale.set(k, k, k) }
       controls.update(); renderer.render(scene, camera); raf = requestAnimationFrame(loop)
     }
     loop()
@@ -176,7 +186,7 @@ export default function View3D({ building, frame, blocked, routes, edgeLoad, onE
     })
     ro.observe(el)
 
-    api.current = { ...api.current, scene, body, head, exitMeshes, routeGroup, byId, N, strips, cur: [], target: undefined }
+    api.current = { ...api.current, scene, body, head, exitMeshes, routeGroup, byId, N, strips, marker, tagCanvas, tagTex, cur: [], target: undefined }
     return () => { cancelAnimationFrame(raf); ro.disconnect(); renderer.dispose(); el.removeChild(renderer.domElement) }
   }, [building])
 
@@ -221,6 +231,22 @@ export default function View3D({ building, frame, blocked, routes, edgeLoad, onE
       m.material.color.copy(base).lerp(red, jam > 0.15 ? 0.3 + 0.7 * jam : 0)
     }
   }, [edgeLoad, building])
+
+  useEffect(() => {
+    const { marker, tagCanvas, tagTex, byId } = api.current
+    if (!marker) return
+    const [a, b] = (bottleneck ?? '').split('-').length === 2 ? (bottleneck as string).split('-') : [undefined, undefined]
+    const na = a && byId[a], nb = b && byId[b]
+    // node ids can contain '-' (e.g. m-34); fall back to matching edge keys
+    let A = na, B = nb
+    if (!(A && B) && bottleneck) for (const id of Object.keys(byId)) if (bottleneck.startsWith(id + '-') && byId[bottleneck.slice(id.length + 1)]) { A = byId[id]; B = byId[bottleneck.slice(id.length + 1)] }
+    if (!A || !B) { marker.visible = false; return }
+    marker.position.set((A.x + B.x) / 2, 0, (A.z + B.z) / 2); marker.visible = true
+    const g = tagCanvas.getContext('2d')!
+    g.clearRect(0, 0, 512, 128); g.fillStyle = 'rgba(200,30,30,0.92)'; g.fillRect(0, 16, 512, 96)
+    g.fillStyle = '#fff'; g.font = '600 46px Segoe UI'; g.textAlign = 'center'; g.fillText(`Bottleneck · queue ${peakQueue ?? ''}`, 256, 80)
+    tagTex.needsUpdate = true
+  }, [bottleneck, peakQueue, building])
 
   // latest simulated positions and colours; the render loop glides people toward them
   useEffect(() => {

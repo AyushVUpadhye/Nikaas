@@ -215,7 +215,7 @@ export default function App() {
       <div className="layout">
         <div style={{ position: 'relative' }}>
           {mode3d && building
-            ? <View3D building={building} frame={f} blocked={blocked} routes={run?.door_routes} edgeLoad={run?.edge_load} onExit={toggleExit} />
+            ? <View3D building={building} frame={f} blocked={blocked} routes={run?.door_routes} edgeLoad={run?.edge_load} bottleneck={run?.bottleneck} peakQueue={run?.peak_queue} onExit={toggleExit} />
             : <canvas ref={canvas} width={1000} height={560} onClick={onCanvasClick}
                 style={{ width: '100%', background: 'var(--card)', border: '1px solid var(--line)', cursor: 'pointer' }} />}
           {!run && !error && <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', color: 'var(--muted)' }}>Simulating {building?.nodes.reduce((n, x) => n + ((x as { people?: number }).people ?? 0), 0) ?? ''} people…</div>}
