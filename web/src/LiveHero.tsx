@@ -1,0 +1,73 @@
+import { useEffect, useState } from 'react'
+import ExitIcon from './ExitIcon.tsx'
+import View3D, { type Building, type Frame } from './View3D.tsx'
+
+const API = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, '') ?? ''
+type Run = { frames: Frame[]; door_routes?: Record<string, string[][]>; bottleneck?: string; peak_queue?: number; total_time_s: number; people?: number }
+
+// The opening seconds: the building is already evacuating, full screen, and the first click starts a fire.
+export default function LiveHero() {
+  const [building, setBuilding] = useState<Building>()
+  const [run, setRun] = useState<Run>()
+  const [i, setI] = useState(0)
+  const [fire, setFire] = useState<string>()
+  const [busy, setBusy] = useState(false)
+  const [h, setH] = useState(() => Math.max(520, window.innerHeight - 64))
+
+  useEffect(() => {
+    fetch('data/iit_kgp_museum.json').then(r => r.json()).then(setBuilding)
+    fetch('data/frames_iit_kgp_nikaas.json').then(r => r.json()).then(setRun)
+    const size = () => setH(Math.max(520, window.innerHeight - 64))
+    addEventListener('resize', size); return () => removeEventListener('resize', size)
+  }, [])
+  useEffect(() => {
+    if (!run) return
+    const id = setInterval(() => setI(k => (k + 1 >= run.frames.length ? 0 : k + 1)), 110)
+    return () => clearInterval(id)
+  }, [run])
+
+  async function burn(exit: string) {
+    if (!building || busy) return
+    if (fire === exit) { // tap again to put it out
+      setFire(undefined); setI(0); fetch('data/frames_iit_kgp_nikaas.json').then(r => r.json()).then(setRun); return
+    }
+    setBusy(true); setFire(exit)
+    try {
+      let r: Run
+      if (exit === 'MAIN') r = await (await fetch('data/frames_iit_kgp_nikaas_blockedMAIN.json')).json()
+      else {
+        const o = await (await fetch(`${API}/optimise`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ building, blocked: [exit], simulate: true }) })).json()
+        r = o.run ?? await (await fetch(`${API}/simulate`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ building, blocked: [exit], plan: o.plan }) })).json()
+      }
+      setI(0); setRun(r)
+    } catch { setFire(undefined) } finally { setBusy(false) }
+  }
+
+  const f = run?.frames[i]
+  const total = f?.people.length ?? 0, out = f?.people.filter(p => p[2] === 'out').length ?? 0
+  const fireLabel = building?.nodes.find(n => n.id === fire)?.label
+  const mmss = (s: number) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(Math.floor(s % 60)).padStart(2, '0')}`
+
+  return (
+    <section className="live-hero" style={{ height: h }}>
+      {building && <View3D building={building} frame={f} blocked={fire ? [fire] : []} routes={run?.door_routes}
+        bottleneck={run?.bottleneck} peakQueue={run?.peak_queue} height={h} showcase onExit={burn} />}
+      <div className="lh-copy">
+        <h1>Photograph the exit map. <span className="runner"><ExitIcon /></span> Get everyone out faster.</h1>
+        <p>Nikaas turns the evacuation map on a wall into a live model of the building, and plans everyone’s way out.</p>
+        <div className="cta-row" style={{ justifyContent: 'flex-start' }}>
+          <a className="cta" href="#/drill">Run a live drill</a>
+          <a className="cta quiet" href="#film">See how it works</a>
+        </div>
+      </div>
+      <div className="lh-live" aria-live="polite">
+        <b>{out}</b><span> of {total} people out</span><em>{mmss(f?.t ?? 0)}</em>
+      </div>
+      <div className={`lh-hint ${fire ? 'on-fire' : ''}`}>
+        {busy ? 'Re-planning every room…'
+          : fire ? <>Fire at {fireLabel}. Everyone was re-routed. <button onClick={() => burn(fire)}>Put it out</button></>
+          : <><i className="pulse" /> Tap a green exit sign to start a fire</>}
+      </div>
+    </section>
+  )
+}

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import ExitIcon from './ExitIcon.tsx'
+import LiveHero from './LiveHero.tsx'
 import View3D, { type Building, type Frame } from './View3D.tsx'
 
 type Validation = { published_s: number; ours_s: number; error_pct: number }
@@ -61,18 +61,7 @@ export default function Home() {
 
   return (
     <div>
-      <section className="page hero">
-        <div className="hero-mark"><ExitIcon />Evacuation digital twin · built at AfterHours 1.0</div>
-        <h1>Photograph the exit map. Get everyone out faster.</h1>
-        <p className="lede">
-          Nikaas turns the evacuation map on a wall into a working model of the building, finds where people will jam,
-          and plans who should use which exit, even when a stair is blocked.
-        </p>
-        <div className="cta-row">
-          <a className="cta" href="#/twin">Block an exit and watch</a>
-          <a className="cta quiet" href="#film">See how it works</a>
-        </div>
-      </section>
+      <LiveHero />
 
       <section id="film" ref={film} className="film" style={{ height: '520vh' }}>
         <div className="film-stage" style={{ height: stageH }}>
@@ -138,7 +127,7 @@ export default function Home() {
 
         <section className="closing">
           <h2>Your building has a map on the wall.</h2>
-          <div className="cta-row"><a className="cta" href="#/twin">Open the twin</a><a className="cta quiet" href="#/challenge">Try to beat the plan</a></div>
+          <div className="cta-row"><a className="cta" href="#/twin">Open the twin</a><a className="cta quiet" href="#/beat">Try to beat the plan</a></div>
         </section>
       </div>
     </div>

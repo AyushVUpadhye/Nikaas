@@ -18,6 +18,7 @@ type Props = {
   height?: number
   cameraT?: number   // scroll film: 0..1 along a scripted camera path (disables orbit controls)
   wallRise?: number  // scroll film: 0..1, walls and furniture rise out of the floor
+  showcase?: boolean // hero: slow auto-orbit, no wheel zoom (so the page still scrolls)
   onExit: (id: string) => void
 }
 
@@ -26,7 +27,7 @@ type Props = {
 const WALL_H = 1.7, WALL_T = 0.2
 const STATE_COLOR: Record<string, string> = { walking: '#f05a22', queuing: '#c8321a', stairs: '#2563eb', inside: '#e0763f' }
 
-export default function View3D({ building, frame, blocked, routes, edgeLoad, bottleneck, peakQueue, height = 560, cameraT, wallRise = 1, onExit }: Props) {
+export default function View3D({ building, frame, blocked, routes, edgeLoad, bottleneck, peakQueue, height = 560, cameraT, wallRise = 1, showcase = false, onExit }: Props) {
   const host = useRef<HTMLDivElement>(null)
   const api = useRef<any>({})
 
@@ -188,7 +189,7 @@ export default function View3D({ building, frame, blocked, routes, edgeLoad, bot
     const camera = new THREE.PerspectiveCamera(35, W / H, 0.5, span * 6)
     camera.position.set(cx + span * 0.04, span * 0.52, cz + span * 0.66)
     const controls = new OrbitControls(camera, renderer.domElement)
-    controls.target.set(cx, 0, cz); controls.enableDamping = true; controls.maxPolarAngle = Math.PI * 0.45; controls.update()
+    controls.target.set(cx, 0, cz); controls.enableDamping = true; if (showcase) { controls.autoRotate = true; controls.autoRotateSpeed = 0.55; controls.enableZoom = false }; controls.maxPolarAngle = Math.PI * 0.45; controls.update()
 
     const ray = new THREE.Raycaster(), mouse = new THREE.Vector2()
     let downAt = 0
@@ -245,7 +246,7 @@ export default function View3D({ building, frame, blocked, routes, edgeLoad, bot
 
     api.current = { ...api.current, scene, body, head, exitMeshes, routeGroup, byId, N, strips, marker, tagCanvas, tagTex, fires, rise, camera, controls, cx, cz, span, cur: [], target: undefined }
     return () => { cancelAnimationFrame(raf); ro.disconnect(); renderer.dispose(); el.removeChild(renderer.domElement) }
-  }, [building, height])
+  }, [building, height, showcase])
 
   useEffect(() => { api.current.onExit = onExit }, [onExit])
 
