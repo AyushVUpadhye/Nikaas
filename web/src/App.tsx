@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import View3D from './View3D.tsx'
+import BeatNikaas from './BeatNikaas.tsx'
 
 type Node = { id: string; type: 'room' | 'corridor' | 'exit'; x: number; z: number; w?: number; d?: number; label?: string }
 type Building = { name: string; nodes: Node[]; edges: { from: string; to: string; width: number }[] }
@@ -8,6 +9,7 @@ type Run = {
   total_time_s: number; per_exit: Record<string, number>; bottleneck: string; peak_queue: number; edge_load?: Record<string, number>
   frames: Frame[]; door_routes?: Record<string, string[][]>
   lower_bound_s?: number; nearest_s?: number // set for Nikaas plans
+  plan?: Record<string, string>
 }
 
 // Live API (AWS). Without it the page falls back to saved runs, so ?demo=1 and offline demos still work.
@@ -254,6 +256,7 @@ export default function App() {
           <span>{fmt(run.total_time_s)}</span>
         </label>
       )}
+      {building && !DEMO && <BeatNikaas api={API} building={building} blocked={blocked} startPlan={plan === 'nearest' ? run?.plan : undefined} />}
     </main>
   )
 }
