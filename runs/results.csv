@@ -8,3 +8,6 @@ when,building,sha256,plan,blocked,people,total_time_s,per_exit,bottleneck,peak_q
 2026-10-30T12:10:30,lab_block.json,1ca510ac6c25,nearest,B,528,437.5,"{'A': 388, 'B': 0, 'C': 140}",m-34-A,256,36c9916
 2026-10-30T12:10:31,sample_floor.json,b856dff359c2,nearest,,300,156.5,"{'A': 174, 'B': 126}",c_w-A,91,36c9916
 2026-10-30T12:10:31,sample_floor.json,b856dff359c2,nearest,A,300,262.25,"{'A': 0, 'B': 300}",c_e-B,184,36c9916
+2026-10-30T13:35:33,lab_block.json,1ca510ac6c25,nearest,C,528,301.25,"{'A': 264, 'B': 264, 'C': 0}",m-34-A,175,aab920d
+2026-10-30T13:35:34,whatif_lab_block_seminar_x2.json,876c3eec57c4,nearest,,648,433.0,"{'A': 384, 'B': 194, 'C': 70}",m-34-A,254,aab920d
+2026-10-30T13:44:07,stadium_gates.json,cd225f90cd8b,nearest,,14600,,"{'GATE_N': 4800, 'GATE_S': 3706, 'GATE_E': 2400, 'GATE_W': 2400, 'GATE_NE': 0, 'GATE_VIP': 200}",cn2-GATE_S,4005,5f38644

@@ -9,5 +9,18 @@
 | lab_block.json | nearest | - | 528 | 301.25 | {'A': 264, 'B': 194, 'C': 70} | m-34-A (175) | 36c9916 |
 | lab_block.json | nearest | A | 528 | 284.75 | {'A': 0, 'B': 458, 'C': 70} | m30-B (184) | 36c9916 |
 | lab_block.json | nearest | B | 528 | 437.5 | {'A': 388, 'B': 0, 'C': 140} | m-34-A (256) | 36c9916 |
+| lab_block.json | nearest | C | 528 | 301.25 | {'A': 264, 'B': 264, 'C': 0} | m-34-A (175) | aab920d |
 | sample_floor.json | nearest | - | 300 | 156.5 | {'A': 174, 'B': 126} | c_w-A (91) | 36c9916 |
 | sample_floor.json | nearest | A | 300 | 262.25 | {'A': 0, 'B': 300} | c_e-B (184) | 36c9916 |
+| whatif_lab_block_seminar_x2.json | nearest | - | 648 | 433.0 | {'A': 384, 'B': 194, 'C': 70} | m-34-A (254) | aab920d |
+
+## Nikaas plan vs nearest exit (`runs/wow.csv`)
+
+| Building | Blocked exit | People | Nearest exit (s) | Nikaas plan (s) | Saved (s) | Saved (%) | Lower bound (s) | Gap to bound (s) | Commit |
+|---|---|---|---|---|---|---|---|---|---|
+| iit_kgp_museum.json | - | 507 | 145.25 | 124.0 | 21.25 | 14.6 | 117.59 | 6.41 | 9d5fe35 |
+| iit_kgp_museum.json | MAIN | 507 | 318.0 | 223.5 | 94.5 | 29.7 | 221.58 | 1.92 | 9d5fe35 |
+| lab_block.json | - | 528 | 301.25 | 166.75 | 134.5 | 44.6 | 163.04 | 3.71 | 9d5fe35 |
+| lab_block.json | B | 528 | 437.5 | 303.0 | 134.5 | 30.7 | 301.85 | 1.15 | 9d5fe35 |
+| sample_floor.json | - | 300 | 156.5 | 152.5 | 4.0 | 2.6 | 136.1 | 16.4 | 9d5fe35 |
+| sample_floor.json | A | 300 | 262.25 | 262.25 | 0.0 | 0.0 | 259.67 | 2.58 | 9d5fe35 |

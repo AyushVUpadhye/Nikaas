@@ -7,6 +7,7 @@
 
 ## API
 `POST /simulate` body `{"building": {...}, "plan": {"room": "exit"} | null, "blocked": ["exitId"]}`
+`"crowd": true` adds a `crowd` field (density analysis, `nikaas/crowd.py`); off by default because it doubles the cost.
 returns `{"total_time_s", "completed", "people", "per_exit": {exit: count}, "bottleneck": "a-b", "peak_queue", "edge_load": {"a-b": peak queue, busiest first}, "routes": {room: [node ids to its exit, widest door]}, "door_routes": {room: [[path per usable door]]}, "plan", "frames": [{"t", "people": [[x, z, state]]}]}`.
 `state` ∈ `inside | walking | queuing | stairs | out`. Frames are every 1 s of simulated time.
 

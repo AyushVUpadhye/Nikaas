@@ -1,0 +1,7 @@
+when,building,sha256,blocked,total_people,nearest_s,optimised_s,saved_s,pct_saved,lower_bound_s,gap_to_bound_s,bottleneck_nearest,bottleneck_opt,commit
+2026-10-30T12:37:53,lab_block.json,1ca510ac6c25,-,528,301.25,166.75,134.5,44.6,163.04,3.71,m-34-A,m-34-A,9d5fe35
+2026-10-30T12:37:57,lab_block.json,1ca510ac6c25,B,528,437.5,303.0,134.5,30.7,301.85,1.15,m-34-A,m-34-A,9d5fe35
+2026-10-30T12:38:00,iit_kgp_museum.json,896c5ba43109,-,507,145.25,124.0,21.25,14.6,117.59,6.41,g820-VER,g1540-MAIN,9d5fe35
+2026-10-30T12:38:06,iit_kgp_museum.json,896c5ba43109,MAIN,507,318.0,223.5,94.5,29.7,221.58,1.92,g820-VER,w860-WEST,9d5fe35
+2026-10-30T12:38:07,sample_floor.json,8046367680e7,-,300,156.5,152.5,4.0,2.6,136.1,16.4,c_w-A,c_w-A,9d5fe35
+2026-10-30T12:38:07,sample_floor.json,8046367680e7,A,300,262.25,262.25,0.0,0.0,259.67,2.58,c_e-B,c_e-B,9d5fe35

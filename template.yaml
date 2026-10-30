@@ -20,14 +20,32 @@ Resources:
         Variables:
           # Bedrock is called in us-east-1 until ap-south-1 access is verified
           BEDROCK_REGION: us-east-1
+          PHOTO_BUCKET: !Ref PhotoBucket
       Policies:
         - Statement:
             - Effect: Allow
               Action: [bedrock:InvokeModel] # also covers the Converse API
               Resource: "*"
+        - S3WritePolicy:
+            BucketName: !Ref PhotoBucket
       Events:
         Api:
           Type: HttpApi # no Path = catch-all $default route; FastAPI does routing and CORS
+
+  # Floor-plan photos sent to POST /vision and what vision made of them (photos/, results/). Private.
+  PhotoBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: true
+        RestrictPublicBuckets: true
+      LifecycleConfiguration:
+        Rules:
+          - Id: expire-uploads
+            Status: Enabled
+            ExpirationInDays: 30
 
   # Static web build (Vite `dist/`). Upload with:
   #   aws s3 sync web/dist s3://<WebBucketName> --delete
@@ -64,3 +82,6 @@ Outputs:
   WebBucketName:
     Description: Bucket to upload the web build to
     Value: !Ref WebBucket
+  PhotoBucketName:
+    Description: Private bucket with /vision uploads and results
+    Value: !Ref PhotoBucket

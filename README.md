@@ -1,21 +1,20 @@
 # Nikaas
 
 ## For judges, start here
+**Nikaas is an open-source evacuation digital twin** — photograph a posted exit map, and Nikaas times the evacuation and finds the room-to-exit assignment that moves everyone out fastest.
 
-**Photograph the exit map. Get everyone out faster — and know before the fire where the crowd will crush.**
+- **44.6% faster** evacuation movement time on the demo lab block: nearest-exit rule 301 s → Nikaas plan 167 s, saving 134 s for 528 people (`runs/wow.csv`).
+- **Within 3.71 s of a proven lower bound** — no plan can move everyone out faster than 163.04 s with the same exits and widths, and Nikaas reaches 166.75 s (`runs/wow.csv`).
+- **Validated against SFPE Handbook Example 1**: 245.25 s vs the published 245.2 s (0.05 s error, `tests/test_sim.py`).
+- **Crowd mode (in progress, not built yet)**: will flag corridors above the crowd-density thresholds researched in `docs/CROWD_RESEARCH.md`.
 
-Nikaas is an open-source evacuation simulator: a building's posted exit map becomes a graph, the simulator
-times the full evacuation in < 1 second, and **Crowd mode** shows which corridor will exceed the
-4 p/m² crush threshold — the level at which crowd forces become fatal (G. Keith Still, *Introduction to
-Crowd Science*, CRC Press 2014).
+Live site: *(Abhijeet's URL — fill before submission)* · Demo video: *(fill before submission)*
 
-- **145 s** — IIT KGP Nehru Museum, 507 people, 3 exits, nearest-exit plan (`runs/`)
-- **245.25 s vs 245.2 s** — reproduces the SFPE Handbook worked example to 0.05 s
-- **301 s → 284 s** — blocking the lab-block west stair makes evacuation *faster* (hydraulic model)
-- **Live API:** `https://4kzez16ucj.execute-api.ap-south-1.amazonaws.com/health`
+---
 
-**Demo:** `?demo=1` on the live URL plays a full evacuation with no backend.
-**Video:** *(link added after recording, 07:30–08:30)*
+**Photograph the exit map. Get everyone out faster.** An evacuation digital twin: a building's
+posted exit map becomes a graph, a simulator times the evacuation, and an optimiser assigns each
+room the exit that empties the building fastest, re-planning when a stair is blocked.
 
 Built from scratch at **AfterHours 1.0** (DBIT, 30–31 Oct 2026), Theme 03: Simulation & Digital
 Twins, by **TheGoodEngineers** (team AH50): Ayush V U, Bhumika G, Abhijeet, Chirag R H.

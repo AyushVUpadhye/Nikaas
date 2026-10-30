@@ -55,3 +55,9 @@ def test_digitised_iit_kgp_plan_is_valid_and_credited():
     assert validate(d) == []
     assert d["source"]["license"] == "CC BY 3.0" and d["source"]["author"]
     assert (ROOT / d["source"]["photo"]).exists()
+
+
+def test_files_saved_with_a_bom_still_load(tmp_path):
+    f = tmp_path / "bom.json"
+    f.write_bytes(b"\xef\xbb\xbf" + (ROOT / "data/sample_floor.json").read_bytes())
+    assert load(f).rooms

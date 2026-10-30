@@ -1,4 +1,4 @@
-"""Crowd density analysis — crush-risk detection.
+﻿"""Crowd density analysis — crush-risk detection.
 
 Computes people per m² on each corridor/door edge over time from a simulate() result.
 Thresholds from docs/CROWD_RESEARCH.md (G. Keith Still; UK Green Guide).
@@ -6,7 +6,6 @@ Thresholds from docs/CROWD_RESEARCH.md (G. Keith Still; UK Green Guide).
 from __future__ import annotations
 import math
 from dataclasses import dataclass, field
-from typing import NamedTuple
 
 
 CRUSH_THRESHOLD = 4.0    # p/m²  — crowd forces can reach fatal levels (G.K. Still)
@@ -21,14 +20,6 @@ def _edge_area(edge_id: str, building: dict) -> float:
     Falls back to clear_width when kind is unknown.
     """
     nodes = {n["id"]: n for n in building["nodes"]}
-    # edge_id is "from-to"
-    parts = edge_id.split("-", 1)
-    if len(parts) != 2:
-        # try splitting differently for ids that contain "-"
-        # find the edge by scanning
-        pass
-
-    # locate the edge in the building
     edge = None
     for e in building["edges"]:
         if f"{e['from']}-{e['to']}" == edge_id or f"{e['to']}-{e['from']}" == edge_id:
@@ -37,10 +28,9 @@ def _edge_area(edge_id: str, building: dict) -> float:
     if edge is None:
         return 1.0  # unknown edge: 1 m² avoids division-by-zero
 
-    kind = edge.get("kind", "corridor")
-    # default kind logic matching sim.py
     from_node = nodes.get(edge["from"], {})
     to_node = nodes.get(edge["to"], {})
+    # doors connect a room to a non-room; corridors connect non-rooms
     if from_node.get("type") == "room" or to_node.get("type") == "room":
         kind = edge.get("kind", "door")
     else:
@@ -49,7 +39,6 @@ def _edge_area(edge_id: str, building: dict) -> float:
     boundary = {"door": 0.152, "corridor": 0.20, "stair": 0.15}.get(kind, 0.15)
     eff_width = max(0.3, edge["width"] - 2 * boundary)
 
-    # length: explicit or straight-line distance
     if "length" in edge:
         length = edge["length"]
     else:
@@ -62,19 +51,22 @@ def _edge_area(edge_id: str, building: dict) -> float:
     return max(0.1, eff_width * length)
 
 
+def _point_to_segment_dist(px: float, pz: float, ax: float, az: float, bx: float, bz: float) -> float:
+    """Minimum distance from point (px, pz) to segment (ax,az)-(bx,bz)."""
+    dx, dz = bx - ax, bz - az
+    seg_len2 = dx * dx + dz * dz
+    if seg_len2 == 0.0:
+        return math.hypot(px - ax, pz - az)
+    t = max(0.0, min(1.0, ((px - ax) * dx + (pz - az) * dz) / seg_len2))
+    return math.hypot(px - (ax + t * dx), pz - (az + t * dz))
+
+
 @dataclass
 class EdgeDensityRecord:
     edge_id: str
-    peak_density: float           # p/m² peak over all frames
-    peak_time: float              # t (s) when peak occurred
+    peak_density: float       # p/m² peak over all frames
+    peak_time: float          # t (s) when peak occurred
     crush_risk: list = field(default_factory=list)   # [{t, density, level}]
-
-
-class CrushRiskEntry(NamedTuple):
-    edge_id: str
-    t: float
-    density: float
-    level: str   # "concern" | "crush"
 
 
 def analyse(sim_result: dict, building: dict) -> dict:
@@ -82,66 +74,50 @@ def analyse(sim_result: dict, building: dict) -> dict:
 
     Parameters
     ----------
-    sim_result : dict   Output of POST /simulate (with "edge_load" and "frames").
+    sim_result : dict   Output of POST /simulate (with "frames").
     building   : dict   The building JSON passed to /simulate.
 
     Returns
     -------
     dict with:
       "edge_density"  : {edge_id: {"area_m2", "peak_density", "peak_t"}}
-      "crush_risk"    : list of {edge_id, t, density, level}   (sorted by t, then density desc)
-      "max_density"   : float   — highest single density seen anywhere
-      "worst_edge"    : str     — edge_id with highest peak density
+      "crush_risk"    : list of {edge_id, t, density, level}  sorted by t then density desc
+      "max_density"   : float  — highest single density seen anywhere at any frame
+      "worst_edge"    : str    — edge_id with highest peak density
+      "first_crush_t" : float | None  — earliest t (s) any edge exceeds CRUSH_THRESHOLD
+      "thresholds"    : {"concern": float, "crush": float}
     """
     frames = sim_result.get("frames", [])
-    edge_load = sim_result.get("edge_load", {})
+    nodes = {n["id"]: n for n in building["nodes"]}
 
-    # Build area cache for all edges in the building
+    # Build area cache and segment endpoints for all edges
     area_cache: dict[str, float] = {}
+    seg_cache: dict[str, tuple] = {}   # edge_id -> (ax, az, bx, bz)
     for e in building["edges"]:
         eid = f"{e['from']}-{e['to']}"
         area_cache[eid] = _edge_area(eid, building)
-
-    # Track per-edge density over time
-    # edge_load gives PEAK queue counts (not per-frame), so for per-frame density
-    # we use people counts near each edge from frames.
-    # For a simpler but valid approximation: distribute the queuing people to edges
-    # proportionally.  For a precise method we need per-frame edge counts.
-    #
-    # The frames give [x, z, state] for each person.  Map each person position to the
-    # nearest edge by matching their (x,z) to corridor nodes in the building.
-    # This is an approximation consistent with the simulator's "hydraulic" model.
-
-    nodes = {n["id"]: n for n in building["nodes"]}
-    edges = building["edges"]
-
-    # Build lookup: for each edge, compute its midpoint
-    def midpoint(e):
-        fn, tn = nodes.get(e["from"]), nodes.get(e["to"])
+        fn = nodes.get(e["from"])
+        tn = nodes.get(e["to"])
         if fn and tn:
-            return ((fn["x"] + tn["x"]) / 2, (fn["z"] + tn["z"]) / 2)
-        return (0.0, 0.0)
+            seg_cache[eid] = (fn["x"], fn["z"], tn["x"], tn["z"])
+        else:
+            seg_cache[eid] = (0.0, 0.0, 0.0, 0.0)
 
-    edge_mids = {f"{e['from']}-{e['to']}": midpoint(e) for e in edges}
-
-    # Per-frame density per edge
+    # Per-frame density per edge — assign each moving person to nearest edge by
+    # perpendicular distance to the edge segment (more accurate than midpoint distance)
     per_edge: dict[str, list[float]] = {eid: [] for eid in area_cache}
     frame_times: list[float] = []
 
     for frame in frames:
         t = frame["t"]
         frame_times.append(t)
-        # count queuing/walking people near each edge
         counts: dict[str, int] = {eid: 0 for eid in area_cache}
         for (px, pz, st) in frame["people"]:
             if st in ("out", "inside"):
                 continue
-            # assign this person to nearest edge
             best_eid, best_d = None, float("inf")
-            for eid, (mx, mz) in edge_mids.items():
-                if eid not in counts:
-                    continue
-                d = math.hypot(px - mx, pz - mz)
+            for eid, (ax, az, bx, bz) in seg_cache.items():
+                d = _point_to_segment_dist(px, pz, ax, az, bx, bz)
                 if d < best_d:
                     best_d = d
                     best_eid = eid
@@ -149,14 +125,14 @@ def analyse(sim_result: dict, building: dict) -> dict:
                 counts[best_eid] += 1
         for eid in counts:
             area = area_cache.get(eid, 1.0)
-            density = counts[eid] / area
-            per_edge[eid].append(density)
+            per_edge[eid].append(counts[eid] / area)
 
-    # Compute peak per edge and crush_risk entries
+    # Aggregate
     crush_risk: list[dict] = []
     edge_density: dict[str, dict] = {}
     max_density = 0.0
     worst_edge = ""
+    first_crush_t: float | None = None
 
     for eid, densities in per_edge.items():
         if not densities:
@@ -172,10 +148,12 @@ def analyse(sim_result: dict, building: dict) -> dict:
         if peak > max_density:
             max_density = peak
             worst_edge = eid
-        # collect risk entries per frame
         for i, d in enumerate(densities):
             if d >= CRUSH_THRESHOLD:
-                crush_risk.append({"edge_id": eid, "t": frame_times[i], "density": round(d, 2), "level": "crush"})
+                entry_t = frame_times[i]
+                crush_risk.append({"edge_id": eid, "t": entry_t, "density": round(d, 2), "level": "crush"})
+                if first_crush_t is None or entry_t < first_crush_t:
+                    first_crush_t = entry_t
             elif d >= CONCERN_THRESHOLD:
                 crush_risk.append({"edge_id": eid, "t": frame_times[i], "density": round(d, 2), "level": "concern"})
 
@@ -186,8 +164,52 @@ def analyse(sim_result: dict, building: dict) -> dict:
         "crush_risk": crush_risk,
         "max_density": round(max_density, 2),
         "worst_edge": worst_edge,
+        "first_crush_t": first_crush_t,
         "thresholds": {
             "concern": CONCERN_THRESHOLD,
             "crush": CRUSH_THRESHOLD,
         },
     }
+
+
+def narrative(crowd_result: dict, building_name: str = "") -> str:
+    """Return a one-paragraph plain-English summary of the crowd density result.
+
+    Intended for the pitch and for judge Q&A.  All numbers come from crowd_result —
+    nothing is typed in.
+    """
+    n = building_name or "this building"
+    worst = crowd_result.get("worst_edge", "")
+    max_d = crowd_result.get("max_density", 0.0)
+    first_t = crowd_result.get("first_crush_t")
+    crush = [e for e in crowd_result.get("crush_risk", []) if e["level"] == "crush"]
+    concern = [e for e in crowd_result.get("crush_risk", []) if e["level"] == "concern"]
+
+    if max_d < CONCERN_THRESHOLD:
+        return (
+            f"In {n}, peak crowd density is {max_d:.1f} p/m² — below the concern "
+            f"threshold of {CONCERN_THRESHOLD} p/m²."
+        )
+
+    lines = [
+        f"In {n}, peak crowd density reaches {max_d:.1f} p/m² on edge '{worst}'."
+    ]
+    if first_t is not None:
+        lines.append(
+            f"The crush threshold ({CRUSH_THRESHOLD} p/m², G. Keith Still) is first "
+            f"exceeded at t = {first_t:.0f} s."
+        )
+    if crush:
+        edges = sorted({e["edge_id"] for e in crush})
+        lines.append(
+            f"{len(crush)} frame(s) across {len(edges)} edge(s) exceed the crush threshold: "
+            f"{', '.join(edges)}."
+        )
+    if concern:
+        c_edges = sorted({e["edge_id"] for e in concern if e["edge_id"] not in {e2["edge_id"] for e2 in crush}})
+        if c_edges:
+            lines.append(
+                f"Additional concern-level density (above {CONCERN_THRESHOLD} p/m²) on: "
+                f"{', '.join(c_edges)}."
+            )
+    return "  ".join(lines)

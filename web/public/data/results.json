@@ -70,6 +70,16 @@
   "commit": "36c9916"
  },
  {
+  "building": "lab_block.json",
+  "plan": "nearest",
+  "blocked": "C",
+  "people": 528,
+  "total_time_s": 301.25,
+  "bottleneck": "m-34-A",
+  "peak_queue": 175,
+  "commit": "aab920d"
+ },
+ {
   "building": "sample_floor.json",
   "plan": "nearest",
   "blocked": "",
@@ -88,5 +98,15 @@
   "bottleneck": "c_e-B",
   "peak_queue": 184,
   "commit": "36c9916"
+ },
+ {
+  "building": "whatif_lab_block_seminar_x2.json",
+  "plan": "nearest",
+  "blocked": "",
+  "people": 648,
+  "total_time_s": 433.0,
+  "bottleneck": "m-34-A",
+  "peak_queue": 254,
+  "commit": "aab920d"
  }
 ]

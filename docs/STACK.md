@@ -9,3 +9,4 @@
 | Infra | AWS SAM: API Gateway → Lambda, S3 (site + photos), CloudWatch | Whole cloud setup in one template, `sam deploy` |
 | Tests | pytest | Every claim has a test |
 | Demo video | Playwright + ffmpeg | Reproducible, no editor |
+| 3D view | three.js 0.160.0, vendored in `web/src/vendor/three` (MIT, licence file included) | The npm registry was unreachable on the venue network; vendoring keeps the build offline-safe |

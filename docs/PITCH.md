@@ -1,4 +1,4 @@
-# Nikaas — 3-minute pitch script
+﻿# Nikaas — 3-minute pitch script
 *Draft by 17:00 · Final by 06:00 · Mark who says each line*
 
 ---
@@ -29,11 +29,11 @@
 
 **Step 2 — Play the animation**
 > "Watch: orange is walking, red is queuing.
-> Total evacuation: 145 seconds.  Bottleneck: corridor g820 to the VER exit, peak queue 104."
+> Evacuation movement time: 145 seconds.  Bottleneck: corridor g820 to the VER exit, peak queue 104."
 
 **Step 3 — Block the MAIN exit**
 > "Now I close the main exit — a fire blocks it.
-> Evacuation time jumps to 318 seconds.  The VER corridor hits 226 people queuing."
+> Movement time jumps to 318 seconds.  The VER corridor hits 226 people queuing."
 
 **Step 4 — Show Crowd mode**  *(if live by demo time)*
 > "Crowd mode overlays density.  Red means above 4 people per square metre —
@@ -52,12 +52,14 @@
 
 ---
 
-## 1:45 – 2:15 · Wow number  *(Bhumika, from docs/RESULTS.md)*
+## 1:45 – 2:15 · Wow number  *(Bhumika, from runs/wow.csv)*
 
 > "On the lab block — 528 people, 3 exits —
-> closing Stair A actually makes evacuation *faster*: from 301 seconds down to 284.
-> That is counterintuitive, but it is what the hydraulic model predicts,
-> and it is the kind of insight a fire safety engineer cannot get from a static floor plan."
+> nearest-exit rule: 301 seconds.  Nikaas optimal plan: 167 seconds.
+> 134 seconds faster.  44.6% reduction in evacuation movement time.
+> And Nikaas's plan is within 3.71 seconds of the mathematically proven lower bound —
+> you cannot do better with this building and these exits.
+> That is the kind of insight a fire safety engineer cannot get from a static floor plan."
 
 ---
 
@@ -81,6 +83,7 @@
 ---
 
 *Numbers to verify before final version:*
-- *145.25 s, 301.25 s, 284.75 s — from docs/RESULTS.md ✓*
-- *245.25 s vs 245.2 s — from nikaas/sim.py docstring ✓*
+- *145.25 s nearest / 124.0 s Nikaas / 318.0 s blocked MAIN — from docs/RESULTS.md ✓*
+- *301.25 s → 166.75 s (134.5 s, 44.6%) — from runs/wow.csv ✓*
+- *245.25 s vs 245.2 s — from tests/test_sim.py ✓*
 - *Stadium Gate South timing — run stadium_gates.json through /simulate before demo*

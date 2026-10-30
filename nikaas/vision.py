@@ -14,6 +14,7 @@ import math
 import os
 import re
 import struct
+from concurrent.futures import ThreadPoolExecutor
 
 from .building import validate
 
@@ -54,6 +55,20 @@ Return ONLY one JSON object, no other text:
   double door 1.8-2.4, corridor 1.8-3.
 - Every room must reach an exit through links. Every id in a link must exist."""
 
+
+EXITS_PROMPT = """This is a photo of a building floor plan. Find ONLY the exits: every place where people can leave the
+building to the outside. Look slowly along the entire outer wall of the drawn building and check:
+- the main entrance (often near a reception or lobby), and any other entrances
+- doors in the outer wall, gaps in the outer wall that lead outside, doors onto a verandah or courtyard
+- steps or stairs drawn just outside the walls, ramps, fire escapes
+- EXIT signs, green running-man symbols, arrows that point out of the building
+Ignore the title box, legend and logos. Do not invent exits that are not drawn.
+
+Coordinates: a 0-1000 grid over the WHOLE PHOTO (x 0 = left edge, 1000 = right edge; y 0 = top, 1000 = bottom).
+Give the point in the doorway itself.
+
+Return ONLY JSON: {"exits": [{"label": "what it is", "at": [x, y], "kind": "door", "width": 1.5}]}
+kind is "door" or "stair"; width is the clear width in metres (door 0.9-1.5, double door 1.8-2.4)."""
 
 def image_size(b):
     """(width, height) in pixels from PNG or JPEG bytes, or None if unknown."""
@@ -106,8 +121,12 @@ def to_building(g, width_m, size=None):
             at = [_num(v) for v in (p.get("at") or [])]
             if len(at) == 2 and None not in at:
                 pts.append((kind, p, at[0] * ax, at[1] * ay))
-    xs = [v for _, x1, _, x2, _ in rooms for v in (x1, x2)] + [x for *_, x, _ in pts]
-    zs = [v for _, _, y1, _, y2 in rooms for v in (y1, y2)] + [y for *_, y in pts]
+    # building extent (sets the scale) from rooms and walkways only: exits can sit outside the walls
+    inner = [(x, y) for kind, _, x, y in pts if kind == "corridor"]
+    xs = [v for _, x1, _, x2, _ in rooms for v in (x1, x2)] + [x for x, _ in inner]
+    zs = [v for _, _, y1, _, y2 in rooms for v in (y1, y2)] + [y for _, y in inner]
+    if not xs:  # nothing but exits: fall back to them
+        xs, zs = [x for *_, x, _ in pts], [y for *_, y in pts]
     if not xs:
         return {"nodes": [], "edges": []}
     x0, z0 = min(xs), min(zs)
@@ -144,6 +163,30 @@ def _ask(client, model_id, messages):
     r = client.converse(modelId=model_id, messages=messages,
                         inferenceConfig={"maxTokens": 10000, "temperature": 0})
     return r["output"]["message"]["content"][0]["text"], r.get("usage", {})
+
+
+def merge_exits(g, found, min_gap=30):
+    """Add exits from the exits-only pass to the main reply `g` (both on the 0-1000 photo grid).
+    Skips any within `min_gap` grid units of an exit we already have, and links each new exit to the nearest
+    walkway point. Returns the labels of the exits it added."""
+    have = [p["at"] for p in g.setdefault("exits", []) if len(p.get("at") or []) == 2]
+    pts = [p for p in g.get("points", []) if len(p.get("at") or []) == 2]
+    added = []
+    for i, x in enumerate(found.get("exits", []), 1):
+        at = [_num(v) for v in (x.get("at") or [])]
+        if len(at) != 2 or None in at or any(math.dist(at, h) < min_gap for h in have):
+            continue
+        eid = f"EXIT_{i}"
+        while any(p.get("id") == eid for p in g["exits"]):
+            eid += "x"
+        g["exits"].append({"id": eid, "label": x.get("label") or "exit", "at": at})
+        have.append(at)
+        if pts:
+            near = min(pts, key=lambda p: math.dist(at, p["at"]))
+            g.setdefault("links", []).append({"from": eid, "to": near["id"], "width": _num(x.get("width"), 1.5),
+                                              "kind": "stair" if x.get("kind") == "stair" else "door"})
+        added.append(x.get("label") or eid)
+    return added
 
 
 def connect(b):
@@ -204,28 +247,35 @@ def connect(b):
 
 
 def read_map(image, fmt="jpeg", width_m=80.0, name="building from photo", model_id=None, region=None,
-             client=None, repair=False):
+             client=None, repair=False, exits_pass=True):
     """image: bytes of a png/jpeg/webp photo. width_m: the building's real east-west length in metres.
-    One Bedrock call (about 15 s), then `connect` fixes any gaps in the walkways. repair=True first sends the
+    Two Bedrock calls run at the same time (about 15-20 s total): the full plan, and an exits-only look that
+    catches exits the first one misses. `connect` then fixes any gaps in the walkways. repair=True sends the
     validator's problems back to the model for one more try (slower; usually not needed).
     Returns (building dict in the contract format, list of validation problems; empty = OK).
-    The dict also carries `vision` metadata: model, token usage, links added by `connect`."""
+    The dict also carries `vision` metadata: model, token usage, exits added, links added by `connect`."""
     model_id = model_id or MODEL_ID
     client = client or _client(region or REGION)
     size = image_size(image)
-    messages = [{"role": "user", "content": [
-        {"image": {"format": fmt, "source": {"bytes": image}}},
-        {"text": PROMPT},
-    ]}]
+    img = {"image": {"format": fmt, "source": {"bytes": image}}}
+    messages = [{"role": "user", "content": [img, {"text": PROMPT}]}]
     usage, calls = {"inputTokens": 0, "outputTokens": 0}, 0
-    building, probs = None, ["model returned no JSON"]
+
+    def tally(u):
+        for key in usage:
+            usage[key] += u.get(key, 0)
+
+    pool = ThreadPoolExecutor(max_workers=1)
+    exits_job = (pool.submit(_ask, client, model_id, [{"role": "user", "content": [img, {"text": EXITS_PROMPT}]}])
+                 if exits_pass else None)
+    g, building, probs = None, None, ["model returned no JSON"]
     for _ in range(2 if repair else 1):
         calls += 1
         text, u = _ask(client, model_id, messages)
-        for key in usage:
-            usage[key] += u.get(key, 0)
+        tally(u)
         try:
-            building = to_building(_extract_json(text), width_m, size)
+            g = _extract_json(text)
+            building = to_building(g, width_m, size)
             probs = validate(building)
         except (ValueError, TypeError, AttributeError) as e:
             probs = [f"model reply was not valid JSON: {e}"]
@@ -234,12 +284,24 @@ def read_map(image, fmt="jpeg", width_m=80.0, name="building from photo", model_
         messages += [{"role": "assistant", "content": [{"text": text}]},
                      {"role": "user", "content": [{"text": "The graph has these problems:\n- " + "\n- ".join(probs)
                                                    + "\nFix them and return the full corrected JSON only, same format."}]}]
+    new_exits = []
+    if exits_job is not None:
+        calls += 1
+        try:
+            text, u = exits_job.result()
+            tally(u)
+            if isinstance(g, dict):
+                new_exits = merge_exits(g, _extract_json(text))
+                building = to_building(g, width_m, size)
+        except Exception:  # the exits pass is a bonus; never lose the main result because of it
+            pass
+    pool.shutdown(wait=False)
     added = []
     if building is not None and any(n["type"] == "exit" for n in building["nodes"]):
         added = connect(building)
         probs = validate(building)
     building = building or {"nodes": [], "edges": []}
     building.update(name=name, units="m", vision={"model": model_id, "width_m": width_m, "calls": calls,
-                                                  "usage": usage, "auto_links": added,
+                                                  "usage": usage, "exits_added": new_exits, "auto_links": added,
                                                   "photo_px": list(size) if size else None})
     return building, probs

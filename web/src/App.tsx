@@ -1,17 +1,28 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import View3D from './View3D.tsx'
+import BeatNikaas from './BeatNikaas.tsx'
 
 type Node = { id: string; type: 'room' | 'corridor' | 'exit'; x: number; z: number; w?: number; d?: number; label?: string }
 type Building = { name: string; nodes: Node[]; edges: { from: string; to: string; width: number }[] }
 type Frame = { t: number; people: [number, number, string][] }
 type Run = {
-  total_time_s: number; per_exit: Record<string, number>; bottleneck: string; peak_queue: number
+  total_time_s: number; per_exit: Record<string, number>; bottleneck: string; peak_queue: number; edge_load?: Record<string, number>
   frames: Frame[]; door_routes?: Record<string, string[][]>
+  lower_bound_s?: number; nearest_s?: number // set for Nikaas plans
+  plan?: Record<string, string>
 }
 
 // Live API (AWS). Without it the page falls back to saved runs, so ?demo=1 and offline demos still work.
 const API = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, '') ?? ''
 const DEMO = new URLSearchParams(location.search).has('demo')
-const SAVED: Record<string, string> = { '': 'data/frames_iit_kgp_nearest.json', MAIN: 'data/frames_iit_kgp_blockedMAIN.json' }
+// Two versions of the same building: digitised by hand, and read from the photo by Amazon Nova Pro (nikaas/vision.py)
+const SOURCES = [
+  { id: 'hand', label: 'Hand-digitised', file: 'data/iit_kgp_museum.json',
+    saved: { '': 'data/frames_iit_kgp_nearest.json', MAIN: 'data/frames_iit_kgp_blockedMAIN.json',
+      'nikaas:': 'data/frames_iit_kgp_nikaas.json', 'nikaas:MAIN': 'data/frames_iit_kgp_nikaas_blockedMAIN.json' } as Record<string, string> },
+  { id: 'vision', label: 'Read from the photo (Amazon Nova Pro)', file: 'data/vision_nova_pro.json',
+    saved: { '': 'data/frames_vision_nova_pro_nearest.json' } as Record<string, string> },
+]
 
 const STATE_VAR: Record<string, string> = { walking: '--walk', queuing: '--queue', stairs: '--stairs', inside: '--inside' }
 const LEGEND: [string, string, string][] = [
@@ -21,20 +32,30 @@ const LEGEND: [string, string, string][] = [
 const fmt = (s: number) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(Math.floor(s % 60)).padStart(2, '0')}`
 const cssVar = (v: string) => getComputedStyle(document.documentElement).getPropertyValue(v).trim()
 
-async function fetchRun(building: Building, blocked: string[]): Promise<Run> {
-  const key = blocked.slice().sort().join('+')
+async function post(path: string, body: unknown) {
+  const r = await fetch(`${API}${path}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
+  if (!r.ok) throw new Error(`Server error ${r.status} on ${path}`)
+  return r.json()
+}
+
+// plan 'nearest' = today's rule; 'nikaas' = Ayush's optimiser (/optimise), then simulated with that plan
+async function fetchRun(building: Building, blocked: string[], SAVED: Record<string, string>, plan: string): Promise<Run> {
+  const b = blocked.slice().sort().join('+')
+  const key = plan === 'nikaas' ? `nikaas:${b}` : b
   if ((!API || DEMO) && key in SAVED) return (await fetch(SAVED[key])).json()
   if (!API) throw new Error('This scenario needs the live API (set VITE_API_URL).')
-  const r = await fetch(`${API}/simulate`, {
-    method: 'POST', headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ building, blocked }),
-  })
-  if (!r.ok) throw new Error(`Simulator error ${r.status}`)
-  return r.json()
+  if (plan !== 'nikaas') return post('/simulate', { building, blocked })
+  const [opt, nearest] = await Promise.all([
+    post('/optimise', { building, blocked }),
+    post('/simulate', { building, blocked, frame_every: 1e6 }),
+  ])
+  const run = await post('/simulate', { building, blocked, plan: opt.plan })
+  return { ...run, lower_bound_s: opt.lower_bound_s, nearest_s: nearest.total_time_s }
 }
 
 export default function App() {
   const [building, setBuilding] = useState<Building>()
+  const [source, setSource] = useState(SOURCES[0])
   const [blocked, setBlocked] = useState<string[]>([])
   const [run, setRun] = useState<Run>()
   const [baseline, setBaseline] = useState<number>()
@@ -42,23 +63,40 @@ export default function App() {
   const [i, setI] = useState(0)
   const [playing, setPlaying] = useState(true)
   const [speed, setSpeed] = useState(4)
+  const [mode3d, setMode3d] = useState(true)
+  const [plan, setPlan] = useState<'nearest' | 'nikaas'>('nearest')
   const canvas = useRef<HTMLCanvasElement>(null)
 
-  useEffect(() => { fetch('data/iit_kgp_museum.json').then(r => r.json()).then(setBuilding) }, [])
+  useEffect(() => { setBuilding(undefined); setRun(undefined); setBlocked([]); setBaseline(undefined); fetch(source.file).then(r => r.json()).then(setBuilding) }, [source])
   useEffect(() => {
     if (!building) return
     let live = true
     setRun(undefined); setError(''); setI(0)
-    fetchRun(building, blocked)
-      .then(r => { if (live) { setRun(r); if (!blocked.length) setBaseline(r.total_time_s) } })
+    fetchRun(building, blocked, source.saved, plan)
+      .then(r => { if (live) { setRun(r); if (!blocked.length && plan === 'nearest') setBaseline(r.total_time_s) } })
       .catch(e => live && setError(String(e.message ?? e)))
     return () => { live = false }
-  }, [building, blocked])
+  }, [building, blocked, plan])
   useEffect(() => {
     if (!run || !playing) return
     const id = setInterval(() => setI(k => Math.min(k + 1, run.frames.length - 1)), 1000 / speed)
     return () => clearInterval(id)
   }, [run, playing, speed])
+
+  // ?demo=1: a hands-free story for the demo video. Landing for 4 s, then the nearest-exit run,
+  // then the main entrance is blocked and the re-planned run plays. Uses saved runs only (no network).
+  const [caption, setCaption] = useState('')
+  useEffect(() => {
+    if (!DEMO || !run) return
+    if (plan === 'nearest') setCaption('Today: everyone takes the nearest exit. Watch where the queues form.')
+    else if (!blocked.length) setCaption('Nikaas plan: each room gets the exit that empties the building fastest.')
+    else setCaption('The main entrance is blocked. Nikaas re-plans for the two exits left.')
+    if (i < run.frames.length - 1) return
+    const next = plan === 'nearest' ? () => setPlan('nikaas') : !blocked.length ? () => setBlocked(['MAIN']) : undefined
+    if (!next) return
+    const t = setTimeout(next, 2500)
+    return () => clearTimeout(t)
+  }, [run, i, blocked, plan])
 
   const view = useMemo(() => {
     if (!building) return undefined
@@ -67,14 +105,15 @@ export default function App() {
   }, [building])
   const scale = (c: HTMLCanvasElement) => view ? Math.min(c.width / (view.x1 - view.x0), c.height / (view.z1 - view.z0)) : 1
   const exits = building?.nodes.filter(n => n.type === 'exit') ?? []
+  const f = run?.frames[i]
 
-  function toggleExit(id: string) {
+  const toggleExit = useCallback((id: string) => {
     setBlocked(b => {
       if (b.includes(id)) return b.filter(x => x !== id)
       if (b.length + 1 >= exits.length) { setError('At least one exit must stay open.'); return b }
       return [...b, id]
     })
-  }
+  }, [exits.length])
 
   function onCanvasClick(ev: React.MouseEvent<HTMLCanvasElement>) {
     const c = canvas.current
@@ -95,12 +134,16 @@ export default function App() {
     g.lineCap = 'round'; g.lineJoin = 'round'
     for (const e of building.edges) {
       const [ax, az] = P(byId[e.from].x, byId[e.from].z), [bx, bz] = P(byId[e.to].x, byId[e.to].z)
-      g.strokeStyle = '#e2e6ea'; g.lineWidth = Math.max(2, e.width * s)
+      // jammed corridors turn red by their peak queue (idea from Bhumika's first version)
+      const load = run?.edge_load?.[`${e.from}-${e.to}`] ?? run?.edge_load?.[`${e.to}-${e.from}`] ?? 0
+      const jam = Math.min(1, load / Math.max(1, run?.peak_queue ?? 1))
+      g.strokeStyle = jam > 0.15 ? `rgba(200, 30, 30, ${0.25 + 0.6 * jam})` : '#e2e6ea'; g.lineWidth = Math.max(2, e.width * s)
       g.beginPath(); g.moveTo(ax, az); g.lineTo(bx, bz); g.stroke()
     }
     // escape routes: one ribbon per door of each room, to its assigned exit
     g.strokeStyle = cssVar('--route'); g.globalAlpha = 0.55; g.lineWidth = 3
     for (const paths of Object.values(run?.door_routes ?? {})) for (const path of paths) {
+      if (!path.every(id => byId[id])) continue // run from another building: skip
       g.beginPath(); path.forEach((id, k) => { const [x, z] = P(byId[id].x, byId[id].z); if (k) g.lineTo(x, z); else g.moveTo(x, z) }); g.stroke()
     }
     g.globalAlpha = 1
@@ -123,35 +166,51 @@ export default function App() {
       const [px, pz] = P(x, z)
       g.fillStyle = cssVar(STATE_VAR[st] ?? '--inside'); g.beginPath(); g.arc(px, pz, 2.6, 0, 7); g.fill()
     }
-  }, [building, view, run, i, blocked])
+  }, [building, view, run, i, blocked, mode3d])
 
-  const f = run?.frames[i]
   const counts: Record<string, number> = {}
   for (const p of f?.people ?? []) counts[p[2]] = (counts[p[2]] ?? 0) + 1
   const delta = run && baseline !== undefined && blocked.length ? run.total_time_s - baseline : undefined
 
   return (
-    <main style={{ maxWidth: 1280, margin: '0 auto', padding: '24px 16px' }}>
-      <header style={{ display: 'flex', alignItems: 'baseline', gap: 16, flexWrap: 'wrap' }}>
-        <h1 style={{ fontFamily: 'var(--serif)', fontSize: 44, margin: 0 }}>Nikaas</h1>
-        <span style={{ color: 'var(--muted)' }}>Photograph the exit map. Get everyone out faster.</span>
-      </header>
+    <div className="page">
+      <h2 style={{ marginBottom: 4 }}>The twin</h2>
       <p style={{ color: 'var(--muted)', margin: '6px 0 16px' }}>{building?.name}</p>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 12 }}>
+        <span style={{ color: 'var(--muted)' }}>Plan:</span>
+        <button className={plan === 'nearest' ? 'on' : ''} onClick={() => setPlan('nearest')}>Today: nearest exit</button>
+        <button className={plan === 'nikaas' ? 'on' : ''} onClick={() => setPlan('nikaas')}>Nikaas plan</button>
+        <span style={{ width: 12 }} />
+        <span style={{ color: 'var(--muted)' }}>Building:</span>
+        {SOURCES.map(src => <button key={src.id} className={src.id === source.id ? 'on' : ''} onClick={() => setSource(src)}>{src.label}</button>)}
+      </div>
+      {source.id === 'vision' && building && (
+        <div style={{ background: '#fff8e6', border: '1px solid #e8c56a', padding: '8px 12px', marginBottom: 12, fontSize: 14 }}>
+          Read from the photo in one model call: {building.nodes.filter(n => n.type === 'room').length} rooms and{' '}
+          {exits.length} exit{exits.length === 1 ? '' : 's'} found. Missing exits make everyone queue at one door, so exits need a
+          human check before the times are trusted (hand-digitised: 3 exits). Details: <code>runs/vision_check.md</code>.
+        </div>
+      )}
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 12 }}>
         <span style={{ color: 'var(--muted)' }}>Block an exit (tap it on the map):</span>
         {exits.map(n => <button key={n.id} className={blocked.includes(n.id) ? 'on' : ''} onClick={() => toggleExit(n.id)}>{n.label ?? n.id}</button>)}
         {blocked.length > 0 && <button onClick={() => setBlocked([])}>Reset</button>}
         <span style={{ flex: 1 }} />
+        <button className={mode3d ? 'on' : ''} onClick={() => setMode3d(true)}>3D</button>
+        <button className={mode3d ? '' : 'on'} onClick={() => setMode3d(false)}>2D</button>
         <button onClick={() => setPlaying(p => !p)}>{playing ? 'Pause' : 'Play'}</button>
         {[1, 2, 4, 8].map(v => <button key={v} className={v === speed ? 'on' : ''} onClick={() => setSpeed(v)}>{v}×</button>)}
         <button onClick={() => setI(0)}>Restart</button>
       </div>
+      {DEMO && caption && <div style={{ background: '#111417', color: '#fff', padding: '12px 16px', marginBottom: 12, fontSize: 20 }}>{caption}</div>}
       {error && <div role="alert" style={{ background: '#fdecec', border: '1px solid var(--queue)', padding: '8px 12px', marginBottom: 12 }}>{error}</div>}
       <div className="layout">
         <div style={{ position: 'relative' }}>
-          <canvas ref={canvas} width={1000} height={560} onClick={onCanvasClick}
-            style={{ width: '100%', background: 'var(--card)', border: '1px solid var(--line)', cursor: 'pointer' }} />
-          {!run && !error && <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', color: 'var(--muted)' }}>Simulating 507 people…</div>}
+          {mode3d && building
+            ? <View3D building={building} frame={f} blocked={blocked} routes={run?.door_routes} edgeLoad={run?.edge_load} bottleneck={run?.bottleneck} peakQueue={run?.peak_queue} onExit={toggleExit} />
+            : <canvas ref={canvas} width={1000} height={560} onClick={onCanvasClick}
+                style={{ width: '100%', background: 'var(--card)', border: '1px solid var(--line)', cursor: 'pointer' }} />}
+          {!run && !error && <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', color: 'var(--muted)' }}>Simulating {building?.nodes.reduce((n, x) => n + ((x as { people?: number }).people ?? 0), 0) ?? ''} people…</div>}
         </div>
         <aside style={{ background: 'var(--card)', border: '1px solid var(--line)', padding: 16 }}>
           <div style={{ fontFamily: 'var(--serif)', fontSize: 56, lineHeight: 1 }}>{fmt(f?.t ?? 0)}</div>
@@ -164,6 +223,16 @@ export default function App() {
           ))}
           <hr style={{ border: 0, borderTop: '1px solid var(--line)' }} />
           <Stat label="Total evacuation" value={run ? `${run.total_time_s} s${delta !== undefined ? `  (${delta >= 0 ? '+' : ''}${delta.toFixed(1)} s vs all exits open)` : ''}` : '…'} />
+          {run?.nearest_s !== undefined && (
+            <div style={{ background: '#ecfdf3', border: '1px solid var(--accent)', padding: '8px 10px', marginTop: 8 }}>
+              <div style={{ fontFamily: 'var(--serif)', fontSize: 26, color: 'var(--accent)' }}>
+                {(run.nearest_s - run.total_time_s).toFixed(1)} s faster
+              </div>
+              <div style={{ fontSize: 13 }}>than the nearest-exit rule ({run.nearest_s} s), {(100 * (run.nearest_s - run.total_time_s) / run.nearest_s).toFixed(1)}% saved</div>
+              {run.lower_bound_s !== undefined && <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 4 }}>
+                within {(run.total_time_s - run.lower_bound_s).toFixed(1)} s of the fastest possible ({run.lower_bound_s} s, proven lower bound)</div>}
+            </div>
+          )}
           <Stat label="Bottleneck (peak queue)" value={run ? `${run.bottleneck} (${run.peak_queue})` : '…'} />
           <Stat label="People per exit" value={run ? Object.entries(run.per_exit).map(([k, v]) => `${k} ${v}`).join(' · ') : '…'} />
           <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 12 }}>
@@ -171,7 +240,16 @@ export default function App() {
           </div>
         </aside>
       </div>
-    </main>
+      {run && (
+        <label style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 12, fontFamily: 'var(--mono)', fontSize: 13 }}>
+          <span>{fmt(f?.t ?? 0)}</span>
+          <input type="range" min={0} max={run.frames.length - 1} value={i} aria-label="Evacuation timeline"
+            onChange={e => { setPlaying(false); setI(Number(e.target.value)) }} style={{ flex: 1, accentColor: 'var(--accent)' }} />
+          <span>{fmt(run.total_time_s)}</span>
+        </label>
+      )}
+      {building && !DEMO && <BeatNikaas api={API} building={building} blocked={blocked} startPlan={plan === 'nearest' ? run?.plan : undefined} />}
+    </div>
   )
 }
 

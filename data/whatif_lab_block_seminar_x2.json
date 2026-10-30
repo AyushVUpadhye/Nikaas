@@ -1,0 +1,386 @@
+{
+ "name": "Representative lab block (L-shaped, 2 wings, 3 stairs) - NOT a measured building - what-if: seminar hall doubled (240)",
+ "units": "m",
+ "nodes": [
+  {
+   "id": "m-34",
+   "type": "corridor",
+   "x": -34,
+   "z": 0
+  },
+  {
+   "id": "m-26",
+   "type": "corridor",
+   "x": -26,
+   "z": 0
+  },
+  {
+   "id": "m-18",
+   "type": "corridor",
+   "x": -18,
+   "z": 0
+  },
+  {
+   "id": "m-10",
+   "type": "corridor",
+   "x": -10,
+   "z": 0
+  },
+  {
+   "id": "m-2",
+   "type": "corridor",
+   "x": -2,
+   "z": 0
+  },
+  {
+   "id": "m6",
+   "type": "corridor",
+   "x": 6,
+   "z": 0
+  },
+  {
+   "id": "m14",
+   "type": "corridor",
+   "x": 14,
+   "z": 0
+  },
+  {
+   "id": "m22",
+   "type": "corridor",
+   "x": 22,
+   "z": 0
+  },
+  {
+   "id": "m30",
+   "type": "corridor",
+   "x": 30,
+   "z": 0
+  },
+  {
+   "id": "s8",
+   "type": "corridor",
+   "x": 30,
+   "z": 8
+  },
+  {
+   "id": "s16",
+   "type": "corridor",
+   "x": 30,
+   "z": 16
+  },
+  {
+   "id": "s24",
+   "type": "corridor",
+   "x": 30,
+   "z": 24
+  },
+  {
+   "id": "s32",
+   "type": "corridor",
+   "x": 30,
+   "z": 32
+  },
+  {
+   "id": "lab1",
+   "type": "room",
+   "x": -30,
+   "z": -6.5,
+   "w": 11,
+   "d": 9,
+   "people": 42
+  },
+  {
+   "id": "lab2",
+   "type": "room",
+   "x": -18,
+   "z": -6.5,
+   "w": 11,
+   "d": 9,
+   "people": 42
+  },
+  {
+   "id": "lab3",
+   "type": "room",
+   "x": -6,
+   "z": -6.5,
+   "w": 11,
+   "d": 9,
+   "people": 42
+  },
+  {
+   "id": "lab4",
+   "type": "room",
+   "x": 6,
+   "z": -6.5,
+   "w": 11,
+   "d": 9,
+   "people": 42
+  },
+  {
+   "id": "lab5",
+   "type": "room",
+   "x": 18,
+   "z": -6.5,
+   "w": 11,
+   "d": 9,
+   "people": 42
+  },
+  {
+   "id": "hod",
+   "type": "room",
+   "x": -32,
+   "z": 5,
+   "w": 6,
+   "d": 6,
+   "people": 4
+  },
+  {
+   "id": "faculty",
+   "type": "room",
+   "x": -24,
+   "z": 5.5,
+   "w": 10,
+   "d": 7,
+   "people": 14
+  },
+  {
+   "id": "seminar",
+   "type": "room",
+   "x": -6,
+   "z": 8,
+   "w": 18,
+   "d": 12,
+   "people": 240
+  },
+  {
+   "id": "lab6",
+   "type": "room",
+   "x": 10,
+   "z": 6,
+   "w": 10,
+   "d": 8,
+   "people": 40
+  },
+  {
+   "id": "wc",
+   "type": "room",
+   "x": 21,
+   "z": 4.5,
+   "w": 6,
+   "d": 5,
+   "people": 6
+  },
+  {
+   "id": "lab7",
+   "type": "room",
+   "x": 37,
+   "z": 10,
+   "w": 10,
+   "d": 8,
+   "people": 40
+  },
+  {
+   "id": "lab8",
+   "type": "room",
+   "x": 37,
+   "z": 22,
+   "w": 10,
+   "d": 9,
+   "people": 40
+  },
+  {
+   "id": "project",
+   "type": "room",
+   "x": 23,
+   "z": 17,
+   "w": 8,
+   "d": 10,
+   "people": 24
+  },
+  {
+   "id": "library",
+   "type": "room",
+   "x": 23,
+   "z": 30,
+   "w": 8,
+   "d": 8,
+   "people": 30
+  },
+  {
+   "id": "A",
+   "type": "exit",
+   "x": -40,
+   "z": 0,
+   "label": "Stair A (west)"
+  },
+  {
+   "id": "B",
+   "type": "exit",
+   "x": 30,
+   "z": -5,
+   "label": "Stair B (main, junction)"
+  },
+  {
+   "id": "C",
+   "type": "exit",
+   "x": 30,
+   "z": 38,
+   "label": "Stair C (side wing end)"
+  }
+ ],
+ "edges": [
+  {
+   "from": "m-34",
+   "to": "m-26",
+   "width": 2.4
+  },
+  {
+   "from": "m-26",
+   "to": "m-18",
+   "width": 2.4
+  },
+  {
+   "from": "m-18",
+   "to": "m-10",
+   "width": 2.4
+  },
+  {
+   "from": "m-10",
+   "to": "m-2",
+   "width": 2.4
+  },
+  {
+   "from": "m-2",
+   "to": "m6",
+   "width": 2.4
+  },
+  {
+   "from": "m6",
+   "to": "m14",
+   "width": 2.4
+  },
+  {
+   "from": "m14",
+   "to": "m22",
+   "width": 2.4
+  },
+  {
+   "from": "m22",
+   "to": "m30",
+   "width": 2.4
+  },
+  {
+   "from": "m30",
+   "to": "s8",
+   "width": 2.4
+  },
+  {
+   "from": "s8",
+   "to": "s16",
+   "width": 2.0
+  },
+  {
+   "from": "s16",
+   "to": "s24",
+   "width": 2.0
+  },
+  {
+   "from": "s24",
+   "to": "s32",
+   "width": 2.0
+  },
+  {
+   "from": "lab1",
+   "to": "m-34",
+   "width": 1.0
+  },
+  {
+   "from": "lab2",
+   "to": "m-18",
+   "width": 1.0
+  },
+  {
+   "from": "lab3",
+   "to": "m-10",
+   "width": 1.0
+  },
+  {
+   "from": "lab4",
+   "to": "m6",
+   "width": 1.0
+  },
+  {
+   "from": "lab5",
+   "to": "m14",
+   "width": 1.0
+  },
+  {
+   "from": "hod",
+   "to": "m-34",
+   "width": 1.0
+  },
+  {
+   "from": "faculty",
+   "to": "m-26",
+   "width": 1.0
+  },
+  {
+   "from": "seminar",
+   "to": "m-10",
+   "width": 1.6
+  },
+  {
+   "from": "seminar",
+   "to": "m-2",
+   "width": 1.6
+  },
+  {
+   "from": "lab6",
+   "to": "m6",
+   "width": 1.0
+  },
+  {
+   "from": "wc",
+   "to": "m22",
+   "width": 1.0
+  },
+  {
+   "from": "lab7",
+   "to": "s8",
+   "width": 1.0
+  },
+  {
+   "from": "lab8",
+   "to": "s24",
+   "width": 1.0
+  },
+  {
+   "from": "project",
+   "to": "s16",
+   "width": 1.0
+  },
+  {
+   "from": "library",
+   "to": "s32",
+   "width": 1.0
+  },
+  {
+   "from": "m-34",
+   "to": "A",
+   "width": 1.2,
+   "kind": "stair"
+  },
+  {
+   "from": "m30",
+   "to": "B",
+   "width": 2.0,
+   "kind": "stair"
+  },
+  {
+   "from": "s32",
+   "to": "C",
+   "width": 1.2,
+   "kind": "stair"
+  }
+ ]
+}

@@ -44,12 +44,31 @@ https://sgsa.org.uk/greenguide/
 
 ## Chinnaswamy Stadium crush — 4 June 2025, Bengaluru
 
-11 people killed outside M. Chinnaswamy Stadium when crowds gathered for RCB IPL victory parade.
-Post-incident analysis (NDTV/The Hindu, June 2025) estimated gate density exceeded 6–7 p/m² in the
-concourse near Gate 6. Primary cause: single narrow gate serving the metro-side concourse.
+11 people killed and 56 injured outside M. Chinnaswamy Stadium during the RCB IPL title celebration.
+Wikipedia ("2025 Bengaluru crowd crush", read 30 Oct 2026) reports crushes at **several gates: 2, 2A, 6, 7, 15,
+17, 18 and 21**. We have **not** verified any density figure or a single root cause, so we state none.
+(Earlier draft text about "6–7 p/m² near Gate 6" and "a single narrow gate" was removed: no source was found.)
 
 Relevance to Nikaas: Crowd mode detects exactly this pattern — a narrow corridor near an exit
 accumulates dangerous density that the nearest-exit plan does not surface.
+
+## National Building Code of India 2016 — Part 4 (Fire and Life Safety)
+
+Relevant provisions for crowd and exit sizing:
+
+| Requirement | NBC 2016 Part 4 value |
+|---|---|
+| Minimum exit width | 1.0 m (≤ 50 persons); +300 mm per additional 50 persons |
+| Travel distance to exit (unsprinklered) | ≤ 30 m |
+| Travel distance to exit (sprinklered) | ≤ 45 m |
+| Minimum 2 exits required | Any occupancy > 50 persons |
+| Assembly occupancies (stadia, theatres) | Exit capacity: 1 exit unit = 560 mm; 1 person/unit/0.75 s |
+
+**Source:** Bureau of Indian Standards, *National Building Code of India 2016*, Part 4: Fire and Life Safety.
+https://www.bis.gov.in/
+
+Relevance to Nikaas: in our **representative** stadium (`data/stadium_gates.json`, not a model of Chinnaswamy),
+Gate South is 2.0 m wide while the south stand holds ~4 800 people. That is an assumption to illustrate the check, not a measurement.
 
 ## Threshold used in nikaas/crowd.py
 
@@ -61,3 +80,7 @@ CONCERN_THRESHOLD = 2.7  # p/m²  (LoS E boundary; Green Guide cap)
 These are the values the `crush_risk` list is generated against.
 At 4.0 p/m² crowd forces can reach levels recorded in fatal crushes; we flag it as `crush`.
 At 2.7 p/m² flow begins to break down; we flag it as `concern`.
+
+The API also returns `first_crush_t` (seconds) — the earliest simulated time any edge exceeds the
+crush threshold.  For the stadium model this answers: "how many seconds into a panic does Gate South
+become dangerous?"  In the pitch: quote this number with its source (`runs/`).
