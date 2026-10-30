@@ -13,3 +13,4 @@
 - **12:07** Fix: occupants split across all doors of a room. Re-measured IIT KGP (commit 68a65a8): nearest 112.75 s, bottleneck verandah door `g820-VER` (peak queue 99), not the AV hall. All frames files regenerated; new `door_routes` field. 15 tests pass.
 - **12:10** Validated against SFPE Engineering Guide Example 1: 245.25 s vs published 245.2 s (`test_reproduces_sfpe_engineering_guide_example_1`). Re-measured (commit 36c9916): IIT KGP nearest 145.25 s (bottleneck verandah door, queue 104); lab block nearest 301.25 s, and **closing Stair A makes it faster (284.75 s)** - the nearest-exit rule is worse than losing a stair.
 - **12:16** `web/` started: 2D player of the IIT KGP building playing real simulator frames (nearest vs main entrance blocked), handed to Bhumika. Design research method added: `docs/DESIGN_RESEARCH.md`.
+- **12:17** Queued people now get distinct positions in frames (render fix only; evacuation times unchanged). 17 tests pass.

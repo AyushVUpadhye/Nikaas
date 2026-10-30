@@ -104,9 +104,19 @@ def simulate(b: Building, plan: dict, blocked=(), seed=7, max_t=1800.0, frame_ev
     frames, t, next_frame = [], 0.0, 0.0
 
     def pos(p):
-        if p.state == "inside":
+        if p.state == "inside" or (p.state == "queuing" and p.leg == 0):
+            # still in the room: spread over the room floor, drifting toward the door while queuing
             n = b.nodes[p.room]
-            return n["x"] + p.ox, n["z"] + p.oz
+            k = 0.45 if p.state == "queuing" else 1.0
+            door = b.nodes[p.path[1]]
+            x, z = n["x"] + p.ox * k, n["z"] + p.oz * k
+            if p.state == "queuing":
+                x, z = x + (door["x"] - x) * 0.35, z + (door["z"] - z) * 0.35
+            return x, z
+        if p.state == "queuing":
+            # waiting in front of a corridor junction or stair: small cluster, not one point
+            a = b.nodes[p.path[p.leg]]
+            return a["x"] + p.ox * 0.15, a["z"] + p.oz * 0.15
         a, c = b.nodes[p.path[p.leg]], b.nodes[p.path[min(p.leg + 1, len(p.path) - 1)]]
         e = edge_of[(p.path[p.leg], p.path[min(p.leg + 1, len(p.path) - 1)])] if p.leg + 1 < len(p.path) else None
         f = 0.0 if not e else min(1.0, p.s / e.length)

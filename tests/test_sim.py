@@ -120,3 +120,12 @@ def test_reproduces_sfpe_engineering_guide_example_1():
     out_l = simulate(load({"nodes": [dict(n, people=150) if n["id"] == "room" else n for n in nodes if not n["id"].endswith("R")],
                            "edges": [e for e in edges if not e["to"].endswith("R")]}), {"room": "XL"})
     assert out_l["total_time_s"] == pytest.approx(245.2, rel=0.02)
+
+
+def test_queuing_people_are_spread_out_not_stacked():
+    b = load(ROOT / "data/iit_kgp_museum.json")
+    out = simulate(b, nearest_plan(b))
+    first = out["frames"][0]["people"]
+    queued = {(x, z) for x, z, st in first if st == "queuing"}
+    n_queued = sum(1 for *_, st in first if st == "queuing")
+    assert n_queued > 100 and len(queued) > 0.9 * n_queued  # almost every queued person has their own spot
