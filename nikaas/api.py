@@ -34,6 +34,7 @@ class SimRequest(BaseModel):
 class OptimiseRequest(BaseModel):
     building: dict
     blocked: list[str] = []
+    simulate: bool = False  # also return the simulated run of the plan (one round trip for the website)
 
 
 try:  # AWS Lambda entry point (template.yaml points at nikaas.api.handler)
@@ -96,6 +97,10 @@ def run_optimise(req: OptimiseRequest):
     try:
         b = load(req.building)
         out = optimise(b, set(req.blocked))
+        if req.simulate:
+            run = simulate(b, out["plan"], set(req.blocked))
+            run["plan"] = out["plan"]
+            out["run"] = run
     except (KeyError, ValueError) as e:
         raise HTTPException(422, str(e))
     return out

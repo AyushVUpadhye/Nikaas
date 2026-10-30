@@ -46,10 +46,11 @@ async function fetchRun(building: Building, blocked: string[], SAVED: Record<str
   if (!API) throw new Error('This scenario needs the live API (set VITE_API_URL).')
   if (plan !== 'nikaas') return post('/simulate', { building, blocked })
   const [opt, nearest] = await Promise.all([
-    post('/optimise', { building, blocked }),
+    post('/optimise', { building, blocked, simulate: true }),
     post('/simulate', { building, blocked, frame_every: 1e6 }),
   ])
-  const run = await post('/simulate', { building, blocked, plan: opt.plan })
+  // newer API returns the simulated plan in the same call; older deployments need a second request
+  const run = opt.run ?? await post('/simulate', { building, blocked, plan: opt.plan })
   return { ...run, lower_bound_s: opt.lower_bound_s, nearest_s: nearest.total_time_s }
 }
 

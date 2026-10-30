@@ -47,3 +47,9 @@ def test_crowd_analysis_is_opt_in():
     c = TestClient(app)
     assert "crowd" not in c.post("/simulate", json={"building": b, "frame_every": 10}).json()
     assert "crowd" in c.post("/simulate", json={"building": b, "frame_every": 10, "crowd": True}).json()
+
+
+def test_optimise_can_return_the_simulated_plan_in_one_call():
+    b = json.loads((ROOT / "data/iit_kgp_museum.json").read_text(encoding="utf-8"))
+    r = TestClient(app).post("/optimise", json={"building": b, "simulate": True}).json()
+    assert r["run"]["total_time_s"] == r["total_time_s"] and r["run"]["frames"] and r["run"]["plan"] == r["plan"]
