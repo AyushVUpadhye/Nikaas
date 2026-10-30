@@ -2,7 +2,7 @@
 
 Part of Nikaas (AfterHours 1.0). Read first: `docs/CONTRACT.md` (shared data format) and `docs/TASKS.md` (team rules, checkpoints).
 
-Folder: `web/` (Vite + React + TypeScript, no UI kit). Style rules: `docs/VISUAL_STYLE.md` (copy it into the repo from Chirag's laptop).
+Folder: `web/` (Vite + React + TypeScript, no UI kit). Style rules: `docs/VISUAL_STYLE.md`. Research method and gallery links: **`docs/DESIGN_RESEARCH.md`** (do the vibe discovery first).
 
 1. **2D player (by 15:30):** load `data/frames_sample_nearest.json`; draw rooms/corridors from
    `data/sample_floor.json` top-down; play frames with play/pause and 1×/2×/4× speed; colour people by `state`
@@ -25,3 +25,4 @@ Newest at the bottom. Check this section after every `git pull`.
 - **12:05** — **Demo building is now the IIT Kharagpur museum floor plan** (real posted panel from India): `data/iit_kgp_museum.json` + frames `data/frames_iit_kgp_nearest.json`, `data/frames_iit_kgp_blockedMAIN.json`. Rooms have a `label` field (name as printed on the panel) to show in the 3D view. Show the original photo `data/maps/iit_kgp_nmst_block_b.jpg` on the landing screen as "the map we started from".
 - **12:07** — All `data/frames_*.json` regenerated. New optional field `door_routes` (one path per door of a room); `routes` still gives one path per room if you want to keep it simple.
 - **12:10** — All `data/frames_*.json` regenerated with SFPE-validated timings (names unchanged).
+- **12:16** — To keep the 15:30 checkpoint safe I started `web/` (Vite + React + TS): a working 2D player of the IIT Kharagpur building with scenario switch, play/pause, 1-8x speed, clock and live counts. Run: `cd web && npm install && npm run dev`. **It is yours now**: restyle it from `docs/DESIGN_RESEARCH.md`, then add the 3D view, landing page and `?demo=1`. All colours are variables in `web/src/theme.css`. I will not edit `web/` again unless you ask, so no merge conflicts.
