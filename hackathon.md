@@ -6,3 +6,4 @@
   provisional sample floor (`runs/results.csv`): nearest exit 119 s, 174 people to Stair A vs 126 to B,
   peak queue 92 at Stair A. With Stair A blocked: 196.75 s, all 300 via Stair B.
 - **11:35** Task briefs per person (`docs/TASKS.md`), sample frames for the frontend in `data/`.
+- **11:44** Per-edge peak queue (`edge_load`) in the simulate output for jam colouring; Lambda entry point `nikaas.api.handler` (Mangum) ready for Abhijeet. 8 tests pass.

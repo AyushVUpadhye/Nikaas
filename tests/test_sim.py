@@ -61,3 +61,23 @@ def test_frames_are_in_contract_shape():
     x, z, state = f["people"][0]
     assert state in {"inside", "walking", "queuing", "stairs", "out"}
     json.dumps(out)  # must serialise for the API
+
+
+def test_busiest_edge_is_the_stair_in_front_of_the_overloaded_exit():
+    b = load(ROOT / "data/sample_floor.json")
+    plan = nearest_plan(b)
+    out = simulate(b, plan)
+    loads = list(out["per_exit"].items())
+    heavy_exit = max(loads, key=lambda kv: kv[1])[0]
+    busiest = next(iter(out["edge_load"]))
+    assert busiest == out["bottleneck"]
+    assert busiest.endswith(f"-{heavy_exit}")  # the stair into the exit that got the most people
+
+
+def test_api_returns_edge_load_and_lambda_handler_exists():
+    from fastapi.testclient import TestClient
+    from nikaas import api
+    b = json.loads((ROOT / "data/sample_floor.json").read_text())
+    r = TestClient(api.app).post("/simulate", json={"building": b})
+    assert r.status_code == 200 and r.json()["edge_load"]
+    assert api.handler is not None

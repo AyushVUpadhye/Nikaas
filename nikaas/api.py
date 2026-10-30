@@ -17,6 +17,14 @@ class SimRequest(BaseModel):
     blocked: list[str] = []
 
 
+try:  # AWS Lambda entry point (template.yaml points at nikaas.api.handler)
+    from mangum import Mangum
+
+    handler = Mangum(app)
+except ImportError:  # local runs do not need mangum
+    handler = None
+
+
 @app.get("/health")
 def health():
     return {"ok": True}

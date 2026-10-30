@@ -122,5 +122,6 @@ def simulate(b: Building, plan: dict, blocked=(), seed=7, max_t=1800.0, frame_ev
         "per_exit": exit_count,
         "bottleneck": bottleneck,
         "peak_queue": peak_q.get(bottleneck, 0) if bottleneck else 0,
+        "edge_load": {k: v for k, v in sorted(peak_q.items(), key=lambda kv: -kv[1])},  # peak queue per edge, busiest first
         "frames": frames,
     }
