@@ -21,8 +21,8 @@ type Props = {
 
 // Look rules: docs/VISUAL_STYLE.md. White architectural model on a dark floor; colour only on
 // people (state), escape routes (green) and danger (red).
-const WALL_H = 1.3, WALL_T = 0.18
-const STATE_COLOR: Record<string, string> = { walking: '#f26a2e', queuing: '#c81e1e', stairs: '#2563eb', inside: '#8a939b' }
+const WALL_H = 1.7, WALL_T = 0.2
+const STATE_COLOR: Record<string, string> = { walking: '#f05a22', queuing: '#c8321a', stairs: '#2563eb', inside: '#e0763f' }
 
 export default function View3D({ building, frame, blocked, routes, edgeLoad, bottleneck, peakQueue, height = 560, onExit }: Props) {
   const host = useRef<HTMLDivElement>(null)
@@ -58,7 +58,15 @@ export default function View3D({ building, frame, blocked, routes, edgeLoad, bot
     scene.add(sun, sun.target)
 
     const mat = (c: string) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.85 })
-    const white = mat('#f3f4f5'), floorMat = mat('#3b3f45'), walkMat = mat('#4a4f56')
+    const white = mat('#f3f4f5'), floorMat = mat('#30353b'), walkMat = mat('#3b4047')
+    // white tiled wall panels like an architect's model: 0.5 m tiles with light grout lines
+    const tileCanvas = document.createElement('canvas'); tileCanvas.width = tileCanvas.height = 64
+    const tg = tileCanvas.getContext('2d')!
+    tg.fillStyle = '#f6f7f8'; tg.fillRect(0, 0, 64, 64); tg.strokeStyle = '#cdd2d7'; tg.lineWidth = 3; tg.strokeRect(0, 0, 64, 64)
+    const tileTex = new THREE.CanvasTexture(tileCanvas); tileTex.colorSpace = THREE.SRGBColorSpace
+    tileTex.wrapS = tileTex.wrapT = THREE.RepeatWrapping; tileTex.anisotropy = 8
+    const tiled = (len: number) => { const t = tileTex.clone(); t.needsUpdate = true; t.repeat.set(Math.max(1, len / 0.5), WALL_H / 0.5); return new THREE.MeshStandardMaterial({ map: t, roughness: 0.9 }) }
+    const deskMat = mat('#e6e9ec'), legMat = mat('#b9c0c7'), plantMat = mat('#5b8a4a')
     const box = (w: number, h: number, d: number, m: any, x: number, y: number, z: number) => {
       const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m)
       b.position.set(x, y, z); b.castShadow = true; b.receiveShadow = true; scene.add(b); return b
@@ -90,26 +98,44 @@ export default function View3D({ building, frame, blocked, routes, edgeLoad, bot
     for (const r of building.nodes.filter(n => n.type === 'room')) {
       const w = r.w ?? 4, d = r.d ?? 4, x0 = r.x - w / 2, x1 = r.x + w / 2, z0 = r.z - d / 2, z1 = r.z + d / 2
       const gaps: Record<string, [number, number][]> = { N: [], S: [], W: [], E: [] }
+      // People walk in straight lines between graph points, so every place a path crosses this room's outline
+      // must be an opening; otherwise they appear to walk through walls (seen on the photo-read building).
+      const cross = (ax: number, az: number, bx: number, bz: number, half: number) => {
+        const hit = (t: number) => t >= 0 && t <= 1
+        if (bz !== az) for (const [side, zz] of [['N', z0], ['S', z1]] as const) {
+          const t = (zz - az) / (bz - az); const x = ax + (bx - ax) * t
+          if (hit(t) && x >= x0 - 0.01 && x <= x1 + 0.01) gaps[side].push([x - half, x + half])
+        }
+        if (bx !== ax) for (const [side, xx] of [['W', x0], ['E', x1]] as const) {
+          const t = (xx - ax) / (bx - ax); const z = az + (bz - az) * t
+          if (hit(t) && z >= z0 - 0.01 && z <= z1 + 0.01) gaps[side].push([z - half, z + half])
+        }
+      }
       for (const e of building.edges) {
-        const other = e.from === r.id ? byId[e.to] : e.to === r.id ? byId[e.from] : undefined
-        if (!other) continue
-        const dx = (other.x - r.x) / w, dz = (other.z - r.z) / d
-        const side = Math.abs(dx) > Math.abs(dz) ? (dx > 0 ? 'E' : 'W') : (dz > 0 ? 'S' : 'N')
-        const along = side === 'E' || side === 'W' ? Math.min(z1 - 0.6, Math.max(z0 + 0.6, other.z)) : Math.min(x1 - 0.6, Math.max(x0 + 0.6, other.x))
-        gaps[side].push([along - e.width / 2 - 0.2, along + e.width / 2 + 0.2])
+        const a = byId[e.from], b = byId[e.to]
+        cross(a.x, a.z, b.x, b.z, Math.max(0.7, e.width / 2 + 0.25))
       }
       const wall = (a: number, b: number, fixed: number, horiz: boolean, cuts: [number, number][]) => {
         let s = a
         for (const [g0, g1] of cuts.sort((p, q) => p[0] - q[0])) {
-          if (g0 > s) horiz ? box(g0 - s, WALL_H, WALL_T, white, (s + g0) / 2, WALL_H / 2, fixed) : box(WALL_T, WALL_H, g0 - s, white, fixed, WALL_H / 2, (s + g0) / 2)
+          if (g0 > s) horiz ? box(g0 - s, WALL_H, WALL_T, tiled(g0 - s), (s + g0) / 2, WALL_H / 2, fixed) : box(WALL_T, WALL_H, g0 - s, tiled(g0 - s), fixed, WALL_H / 2, (s + g0) / 2)
           s = Math.max(s, g1)
         }
-        if (b > s) horiz ? box(b - s, WALL_H, WALL_T, white, (s + b) / 2, WALL_H / 2, fixed) : box(WALL_T, WALL_H, b - s, white, fixed, WALL_H / 2, (s + b) / 2)
+        if (b > s) horiz ? box(b - s, WALL_H, WALL_T, tiled(b - s), (s + b) / 2, WALL_H / 2, fixed) : box(WALL_T, WALL_H, b - s, tiled(b - s), fixed, WALL_H / 2, (s + b) / 2)
       }
       wall(x0, x1, z0, true, gaps.N); wall(x0, x1, z1, true, gaps.S); wall(z0, z1, x0, false, gaps.W); wall(z0, z1, x1, false, gaps.E)
       const fl = new THREE.Mesh(new THREE.PlaneGeometry(w, d), mat('#454a51'))
       fl.rotation.x = -Math.PI / 2; fl.position.set(r.x, 0.015, r.z); fl.receiveShadow = true; scene.add(fl)
       label(r.label ?? r.id, r.x, r.z - d / 2 + 0.9, Math.min(1.1, w / 5.6))
+      if (w >= 4 && d >= 4) {
+        const cols = Math.max(1, Math.floor((w - 1.6) / 2.4)), rows = Math.max(1, Math.floor((d - 2.4) / 2.2))
+        for (let a = 0; a < cols; a++) for (let c = 0; c < rows; c++) {
+          const dx = x0 + 1.2 + (a + 0.5) * ((w - 2.4) / cols), dz = z0 + 1.8 + (c + 0.5) * ((d - 3) / rows)
+          box(1.5, 0.08, 0.7, deskMat, dx, 0.74, dz); box(1.4, 0.7, 0.06, legMat, dx, 0.37, dz)
+        }
+        const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.18, 0.4, 12), white); pot.position.set(x1 - 0.7, 0.2, z0 + 0.7); scene.add(pot)
+        const leaf = new THREE.Mesh(new THREE.SphereGeometry(0.45, 12, 10), plantMat); leaf.position.set(x1 - 0.7, 0.75, z0 + 0.7); leaf.castShadow = true; scene.add(leaf)
+      }
     }
     // exits: a post with a sign, clickable
     const exitMeshes: any[] = []
@@ -125,13 +151,29 @@ export default function View3D({ building, frame, blocked, routes, edgeLoad, bot
 
     // people: simple human figures (body + head), instanced
     const N = Math.max(1, building.nodes.reduce((s, n: any) => s + (n.people ?? 0), 0))
-    const body = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.17, 0.22, 1.15, 8), new THREE.MeshStandardMaterial({ roughness: 0.6 }), N)
-    const head = new THREE.InstancedMesh(new THREE.SphereGeometry(0.15, 10, 8), mat('#d9a17c'), N)
-    body.castShadow = head.castShadow = true
-    body.frustumCulled = head.frustumCulled = false // instances move far from the origin; default culling hides them
-    scene.add(body, head)
+    // human figure = torso + legs + head (instanced), coloured by state
+    const body = new THREE.InstancedMesh(new THREE.BoxGeometry(0.46, 0.62, 0.26), new THREE.MeshStandardMaterial({ roughness: 0.55 }), N)
+    const legs = new THREE.InstancedMesh(new THREE.BoxGeometry(0.34, 0.78, 0.2), mat('#3a3f46'), N)
+    const head = new THREE.InstancedMesh(new THREE.SphereGeometry(0.15, 12, 10), mat('#f0b48a'), N)
+    body.castShadow = head.castShadow = legs.castShadow = true
+    body.frustumCulled = head.frustumCulled = legs.frustumCulled = false // instances move far from the origin; default culling hides them
+    scene.add(body, legs, head)
 
     const routeGroup = new THREE.Group(); scene.add(routeGroup)
+    const fires: Record<string, any> = {}
+    for (const x of building.nodes.filter(n => n.type === 'exit')) {
+      const f = new THREE.Group(); f.visible = false; f.position.set(x.x, 0, x.z); scene.add(f)
+      const rings = [0, 1, 2].map(k => {
+        const r = new THREE.Mesh(new THREE.RingGeometry(1.6, 2.2, 48), new THREE.MeshBasicMaterial({ color: '#ff6a1a', transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }))
+        r.rotation.x = -Math.PI / 2; r.position.y = 0.06; r.userData.o = k / 3; f.add(r); return r
+      })
+      const flames = Array.from({ length: 14 }, (_, k) => {
+        const m = new THREE.Mesh(new THREE.ConeGeometry(0.22, 1.1, 8), new THREE.MeshBasicMaterial({ color: k % 2 ? '#ff8a1a' : '#ffc21a', transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }))
+        m.userData.a = (k / 14) * Math.PI * 2; m.userData.p = k * 0.37; f.add(m); return m
+      })
+      const glow = new THREE.PointLight('#ff6a1a', 0, 14, 1.6); glow.position.y = 1.2; f.add(glow)
+      fires[x.id] = { group: f, rings, flames, glow }
+    }
     // bottleneck marker: pulsing red ring on the floor + a floating label, moved to the worst jam per run
     const marker = new THREE.Group(); marker.visible = false; scene.add(marker)
     const ring = new THREE.Mesh(new THREE.RingGeometry(2.2, 2.7, 48), new THREE.MeshBasicMaterial({ color: '#c81e1e', transparent: true, opacity: 0.85, side: THREE.DoubleSide, depthWrite: false }))
@@ -141,7 +183,7 @@ export default function View3D({ building, frame, blocked, routes, edgeLoad, bot
     const tag = new THREE.Sprite(new THREE.SpriteMaterial({ map: tagTex, depthTest: false })); tag.scale.set(13, 3.25, 1); tag.position.y = 5.5; marker.add(tag)
 
     const camera = new THREE.PerspectiveCamera(35, W / H, 0.5, span * 6)
-    camera.position.set(cx + span * 0.05, span * 0.8, cz + span * 0.95)
+    camera.position.set(cx + span * 0.04, span * 0.52, cz + span * 0.66)
     const controls = new OrbitControls(camera, renderer.domElement)
     controls.target.set(cx, 0, cz); controls.enableDamping = true; controls.maxPolarAngle = Math.PI * 0.45; controls.update()
 
@@ -167,16 +209,24 @@ export default function View3D({ building, frame, blocked, routes, edgeLoad, bot
       if (a.target) {
         for (let n = 0; n < N; n++) {
           const tg = a.target[n]
-          if (!tg) { body.setMatrixAt(n, hide); head.setMatrixAt(n, hide); continue }
+          if (!tg) { body.setMatrixAt(n, hide); head.setMatrixAt(n, hide); legs.setMatrixAt(n, hide); continue }
           const c = a.cur[n] ?? (a.cur[n] = [tg[0], tg[1]])
           const jump = Math.hypot(tg[0] - c[0], tg[1] - c[1]) > 25 // new run or restart: snap, do not slide across the map
           c[0] = jump ? tg[0] : c[0] + (tg[0] - c[0]) * k; c[1] = jump ? tg[1] : c[1] + (tg[1] - c[1]) * k
           const moving = tg[2] === 'walking' || tg[2] === 'stairs'
           const bob = moving ? Math.abs(Math.sin(now / 140 + n)) * 0.05 : 0
-          body.setMatrixAt(n, M.makeTranslation(c[0], 0.58 + bob, c[1]))
-          head.setMatrixAt(n, M.makeTranslation(c[0], 1.3 + bob, c[1]))
+          legs.setMatrixAt(n, M.makeTranslation(c[0], 0.39, c[1]))
+          body.setMatrixAt(n, M.makeTranslation(c[0], 1.09 + bob, c[1]))
+          head.setMatrixAt(n, M.makeTranslation(c[0], 1.58 + bob, c[1]))
         }
-        body.instanceMatrix.needsUpdate = true; head.instanceMatrix.needsUpdate = true
+        body.instanceMatrix.needsUpdate = true; head.instanceMatrix.needsUpdate = true; legs.instanceMatrix.needsUpdate = true
+      }
+      for (const fr of Object.values(fires) as any[]) {
+        if (!fr.group.visible) continue
+        const tt = now / 1000
+        fr.rings.forEach((r: any) => { const k = (tt * 0.45 + r.userData.o) % 1; const sc = 0.6 + k * 2.6; r.scale.set(sc, sc, sc); r.material.opacity = 0.65 * (1 - k) })
+        fr.flames.forEach((m: any) => { const k = (tt * 1.4 + m.userData.p) % 1; m.position.set(Math.cos(m.userData.a) * 0.9, 0.3 + k * 1.2, Math.sin(m.userData.a) * 0.9); m.scale.setScalar(1 - k * 0.7); m.material.opacity = 0.9 * (1 - k) })
+        fr.glow.intensity = 40 + Math.sin(tt * 11) * 12
       }
       if (marker.visible) { const k = 1 + 0.12 * Math.sin(now / 250); ring.scale.set(k, k, k) }
       controls.update(); renderer.render(scene, camera); raf = requestAnimationFrame(loop)
@@ -187,7 +237,7 @@ export default function View3D({ building, frame, blocked, routes, edgeLoad, bot
     })
     ro.observe(el)
 
-    api.current = { ...api.current, scene, body, head, exitMeshes, routeGroup, byId, N, strips, marker, tagCanvas, tagTex, cur: [], target: undefined }
+    api.current = { ...api.current, scene, body, head, exitMeshes, routeGroup, byId, N, strips, marker, tagCanvas, tagTex, fires, cur: [], target: undefined }
     return () => { cancelAnimationFrame(raf); ro.disconnect(); renderer.dispose(); el.removeChild(renderer.domElement) }
   }, [building, height])
 
@@ -200,6 +250,7 @@ export default function View3D({ building, frame, blocked, routes, edgeLoad, bot
       m.material.color.set(off ? '#c81e1e' : '#16a34a')
       if (m.material.emissive) m.material.emissive.set(off ? '#c81e1e' : '#16a34a')
     }
+    for (const [id, fr] of Object.entries(api.current.fires ?? {}) as [string, any][]) fr.group.visible = blocked.includes(id)
   }, [blocked, building])
 
   // escape routes: green ribbons from each door to its exit
