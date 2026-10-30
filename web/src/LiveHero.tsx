@@ -26,6 +26,14 @@ export default function LiveHero() {
     return () => clearInterval(id)
   }, [run])
 
+  // ?fire=MAIN starts that fire 3 s after load, so recordings and the demo video need no clicking in 3D
+  useEffect(() => {
+    const f = new URLSearchParams(location.search).get('fire')
+    if (!f || !building || !run) return
+    const id = setTimeout(() => burn(f), 3000)
+    return () => clearTimeout(id)
+  }, [building, !!run]) // eslint-disable-line react-hooks/exhaustive-deps
+
   async function burn(exit: string) {
     if (!building || busy) return
     if (fire === exit) { // tap again to put it out

@@ -1,14 +1,17 @@
 # Nikaas
 
+![Nikaas: the building is already evacuating; a fire at the main entrance re-routes everyone](docs/img/hero.gif)
+
 ## For judges, start here
 **Nikaas is an open-source evacuation digital twin** — photograph a posted exit map, and Nikaas times the evacuation and finds the room-to-exit assignment that moves everyone out fastest.
 
 - **44.6% faster** evacuation movement time on the demo lab block: nearest-exit rule 301 s → Nikaas plan 167 s, saving 134 s for 528 people (`runs/wow.csv`).
 - **Within 3.71 s of a proven lower bound** — no plan can move everyone out faster than 163.04 s with the same exits and widths, and Nikaas reaches 166.75 s (`runs/wow.csv`).
 - **Validated against SFPE Handbook Example 1**: 245.25 s vs the published 245.2 s (0.05 s error, `tests/test_sim.py`).
-- **Crowd mode (in progress, not built yet)**: will flag corridors above the crowd-density thresholds researched in `docs/CROWD_RESEARCH.md`.
+- **Crowd mode (opt-in)**: `POST /simulate` with `crowd: true` flags corridor and door edges above the density thresholds researched in `docs/CROWD_RESEARCH.md` (concern 2.7 p/m², crush 4 p/m²). Densities are estimated from a flow model, not a spatial crowd model, and are capped at 10 p/m².
+- **Live drill**: judges scan a QR code, pick their room, and their phone shows their own exit; block an exit and every affected phone flashes red with its new route (and vibrates on Android). Phones taped beside doors become live exit signs that turn red and point to the nearest open exit.
 
-Live site: **http://nikaas-webbucket-hbkfctr0cw8s.s3-website.ap-south-1.amazonaws.com** (Home, Twin, Beat Nikaas, Evidence) · API: https://4kzez16ucj.execute-api.ap-south-1.amazonaws.com/health · Demo video: *(fill before submission)*
+Live site: **http://nikaas-webbucket-hbkfctr0cw8s.s3-website.ap-south-1.amazonaws.com** (Home, Twin, Beat Nikaas, Live drill, Evidence; on phones `#/me` and `#/sign`) · API: https://4kzez16ucj.execute-api.ap-south-1.amazonaws.com/health · Demo video: *(fill before submission)*
 
 ---
 
