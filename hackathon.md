@@ -38,3 +38,4 @@
 - **13:40** 3D bottleneck marker: pulsing red ring + label at the worst jam per run (IIT KGP nearest: verandah door, queue 104), browser-checked.
 - **13:42** Reviewed Bhumika's Crowd mode (crowd.py, /simulate crowd field, stadium): 51 tests pass. Loader now tolerates a UTF-8 BOM (stadium file had one). Removed an unsourced Chinnaswamy cause/density claim (Wikipedia: crushes at 8 gates).
 - **13:47** Stadium (14,600 people) does not finish within 1,800 s with nearest exit (Gate South queue 4,005); too slow and too large for the live API. Tried deque queues for speed: no gain (2.88 s vs 2.7 s per 300 sim-s), reverted. Asked Bhumika to precompute or shrink the stadium.
+- **13:52** `/simulate` crowd analysis made opt-in (`crowd: true`): IIT KGP tap-to-block back to ~1 s locally. Flagged non-physical crowd densities (17-22 p/m²) to Bhumika with a suggested fix.

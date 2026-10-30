@@ -27,6 +27,7 @@ class SimRequest(BaseModel):
     plan: dict | None = None  # room -> exit; null = nearest open exit
     blocked: list[str] = []
     frame_every: float = 1.0  # seconds of simulated time between frames (bigger = smaller response)
+    crowd: bool = False  # run the crowd-density analysis too (slower; off for interactive tap-to-block)
 
 
 class OptimiseRequest(BaseModel):
@@ -71,11 +72,12 @@ def run(req: SimRequest):
     except (KeyError, ValueError) as e:
         raise HTTPException(422, str(e))
     out["plan"] = plan
-    # crowd density analysis: crush-risk on every corridor/door edge over time
-    try:
-        out["crowd"] = crowd_analyse(out, req.building)
-    except Exception:  # never fail /simulate because of crowd analysis
-        out["crowd"] = None
+    # crowd density analysis: crush-risk on every corridor/door edge over time (only when asked: it doubles the cost)
+    if req.crowd:
+        try:
+            out["crowd"] = crowd_analyse(out, req.building)
+        except Exception:  # never fail /simulate because of crowd analysis
+            out["crowd"] = None
     return out
 
 

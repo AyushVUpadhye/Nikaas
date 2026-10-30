@@ -40,3 +40,10 @@ def test_beat_nikaas_judge_cannot_beat_the_optimiser_with_nearest_exit():
     assert r["judge_time_s"] >= r["nikaas_time_s"] >= r["lower_bound_s"] and r["beat_nikaas"] is False
     bad = c.post("/beat", json={"building": b, "plan": {"avhall": "MAIN"}})
     assert bad.status_code == 422 and "no exit for rooms" in bad.text
+
+
+def test_crowd_analysis_is_opt_in():
+    b = json.loads((ROOT / "data/iit_kgp_museum.json").read_text(encoding="utf-8"))
+    c = TestClient(app)
+    assert "crowd" not in c.post("/simulate", json={"building": b, "frame_every": 10}).json()
+    assert "crowd" in c.post("/simulate", json={"building": b, "frame_every": 10, "crowd": True}).json()
