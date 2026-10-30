@@ -79,6 +79,9 @@ def start(building: dict, blocked: list[str], previous: dict | None = None) -> d
         "room_labels": {r: b.nodes[r].get("label", r) for r in b.rooms},
         "rooms": rooms,
         "changed": changed,  # rooms whose exit just changed: their phones alert
+        # small map for the phones: node positions/sizes and walkways (a few KB)
+        "map": {"nodes": [[n["id"], n["type"], n["x"], n["z"], n.get("w", 0), n.get("d", 0)] for n in building["nodes"]],
+                "edges": [[e["from"], e["to"]] for e in building["edges"]]},
     }
     save(state)
     return state
