@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 
 from nikaas.building import validate
-from nikaas.vision import _extract_json, connect, image_size, read_map, to_building
+from nikaas.vision import EXITS_PROMPT, _extract_json, connect, image_size, merge_exits, read_map, to_building
 
 ROOT = Path(__file__).resolve().parents[1]
 PHOTO = ROOT / "data/maps/iit_kgp_nmst_block_b.jpg"
@@ -22,14 +22,21 @@ REPLY = {
 }
 
 
+# exits-only pass: one exit we already have (same spot) and one new one at the west end
+EXITS_REPLY = {"exits": [{"label": "Main door", "at": [505, 352]},
+                         {"label": "West steps", "at": [100, 350], "kind": "stair", "width": 1.8}]}
+
+
 class FakeBedrock:
-    def __init__(self, reply):
-        self.reply, self.calls = reply, 0
+    def __init__(self, reply, exits_reply='{"exits": []}'):
+        self.reply, self.exits_reply, self.calls = reply, exits_reply, 0
 
     def converse(self, **kw):
         self.calls += 1
-        assert kw["messages"][0]["content"][0]["image"]["source"]["bytes"]
-        return {"output": {"message": {"content": [{"text": self.reply}]}},
+        content = kw["messages"][0]["content"]
+        assert content[0]["image"]["source"]["bytes"]
+        text = self.exits_reply if content[1]["text"] == EXITS_PROMPT else self.reply
+        return {"output": {"message": {"content": [{"text": text}]}},
                 "usage": {"inputTokens": 10, "outputTokens": 20}}
 
 
@@ -62,13 +69,77 @@ def test_connect_links_everything_and_reports_what_it_added():
 
 
 def test_read_map_end_to_end_with_fake_bedrock():
-    fake = FakeBedrock("```json\n" + json.dumps(REPLY) + "\n```")
+    fake = FakeBedrock("```json\n" + json.dumps(REPLY) + "\n```", json.dumps(EXITS_REPLY))
     b, probs = read_map(PHOTO.read_bytes(), "jpeg", width_m=81, client=fake)
-    assert probs == [] and fake.calls == 1
+    assert probs == [] and fake.calls == 2
     assert b["vision"]["auto_links"] and b["vision"]["photo_px"] == [1920, 1277]
-    assert {n["type"] for n in b["nodes"]} == {"room", "corridor", "exit"}
+    assert b["vision"]["exits_added"] == ["West steps"]
+    assert sum(n["type"] == "exit" for n in b["nodes"]) == 2
+
+
+def test_merge_exits_skips_duplicates_and_links_new_exit_to_nearest_point():
+    g = json.loads(json.dumps(REPLY))
+    assert merge_exits(g, EXITS_REPLY) == ["West steps"]
+    new = g["exits"][-1]
+    link = next(e for e in g["links"] if e["from"] == new["id"])
+    assert link["to"] == "p1" and link["kind"] == "stair" and link["width"] == 1.8
+
+
+def test_exits_pass_failure_keeps_main_result():
+    fake = FakeBedrock(json.dumps(REPLY), "not json at all")
+    b, probs = read_map(PHOTO.read_bytes(), "jpeg", client=fake)
+    assert probs == [] and b["vision"]["exits_added"] == []
 
 
 def test_read_map_reports_garbage_instead_of_crashing():
     b, probs = read_map(b"\xff\xd8not really a jpeg", "jpeg", client=FakeBedrock("I cannot read this image."))
     assert probs and b["nodes"] == []
+
+
+# --- POST /vision (API) ---
+
+def _api(monkeypatch, reply=None, exits='{"exits": []}'):
+    import base64
+
+    import boto3
+    from fastapi.testclient import TestClient
+
+    import nikaas.api as api
+    import nikaas.vision as vision
+
+    fake = FakeBedrock(json.dumps(reply or REPLY), exits)
+    monkeypatch.setattr(vision, "_client", lambda region: fake)
+    monkeypatch.delenv("PHOTO_BUCKET", raising=False)  # no S3 in tests
+    monkeypatch.setattr(boto3, "client", lambda *a, **k: (_ for _ in ()).throw(AssertionError("no AWS in tests")))
+    return TestClient(api.app), base64.b64encode(PHOTO.read_bytes()).decode()
+
+
+def test_vision_endpoint_returns_valid_building(monkeypatch):
+    c, b64 = _api(monkeypatch)
+    r = c.post("/vision", json={"image": "data:image/jpeg;base64," + b64, "width_m": 81, "name": "museum"})
+    assert r.status_code == 200, r.text
+    out = r.json()
+    assert out["ok"] and out["problems"] == [] and out["id"] and out["photo_key"] is None
+    assert out["building"]["name"] == "museum"
+    assert c.post("/validate", json={"building": out["building"]}).json()["ok"]
+
+
+def test_vision_endpoint_rejects_bad_input(monkeypatch):
+    c, b64 = _api(monkeypatch)
+    assert c.post("/vision", json={"image": "!!not base64!!"}).status_code == 400
+    assert c.post("/vision", json={"image": "aGVsbG8="}).status_code == 415  # "hello"
+    assert c.post("/vision", json={"image": b64, "width_m": 0}).status_code == 422
+
+
+def test_vision_endpoint_reports_bedrock_failure_as_502(monkeypatch):
+    import nikaas.vision as vision
+
+    c, b64 = _api(monkeypatch)
+
+    class Down:
+        def converse(self, **kw):
+            raise RuntimeError("AccessDeniedException")
+
+    monkeypatch.setattr(vision, "_client", lambda region: Down())
+    r = c.post("/vision", json={"image": b64})
+    assert r.status_code == 502 and "AccessDenied" in r.text

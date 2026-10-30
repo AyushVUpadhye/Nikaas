@@ -1,5 +1,11 @@
 """HTTP API (FastAPI). Run locally: uvicorn nikaas.api:app --reload
 Contract: docs/CONTRACT.md. Abhijeet wraps this for Lambda (Mangum) in the SAM template."""
+import base64
+import binascii
+import json
+import os
+import uuid
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
@@ -76,3 +82,63 @@ def run_optimise(req: OptimiseRequest):
     except (KeyError, ValueError) as e:
         raise HTTPException(422, str(e))
     return out
+
+class VisionRequest(BaseModel):
+    image: str  # base64 photo (png/jpeg/webp), with or without a "data:image/...;base64," prefix
+    width_m: float = 80.0  # the building's real east-west length in metres (photos have no scale)
+    name: str | None = None
+
+
+MAX_PHOTO = 3_750_000  # Bedrock's image size limit (bytes)
+
+
+def photo_format(b):
+    if b[:8] == b"\x89PNG\r\n\x1a\n":
+        return "png"
+    if b[:3] == b"\xff\xd8\xff":
+        return "jpeg"
+    if b[:4] == b"RIFF" and b[8:12] == b"WEBP":
+        return "webp"
+    return None
+
+
+def save(key, body, content_type):
+    """Keep uploads and results in the photo bucket (set on Lambda by template.yaml; skipped locally)."""
+    bucket = os.environ.get("PHOTO_BUCKET")
+    if not bucket:
+        return None
+    import boto3
+
+    boto3.client("s3").put_object(Bucket=bucket, Key=key, Body=body, ContentType=content_type)
+    return key
+
+
+@app.post("/vision")
+def vision(req: VisionRequest):
+    """Photo of a floor plan -> building graph (docs/CONTRACT.md). Takes ~15-20 s (Amazon Bedrock)."""
+    from .vision import read_map
+
+    data = req.image.split(",", 1)[1] if req.image.startswith("data:") else req.image
+    try:
+        img = base64.b64decode(data, validate=True)
+    except (binascii.Error, ValueError):
+        raise HTTPException(400, "image must be base64")
+    fmt = photo_format(img)
+    if not fmt:
+        raise HTTPException(415, "photo must be PNG, JPEG or WebP")
+    if len(img) > MAX_PHOTO:
+        raise HTTPException(413, f"photo is {len(img) / 1e6:.1f} MB; max 3.75 MB (resize it first)")
+    if not 5 <= req.width_m <= 2000:
+        raise HTTPException(422, "width_m must be the building length in metres (5-2000)")
+    try:
+        building, probs = read_map(img, fmt, width_m=req.width_m, name=req.name or "building from photo")
+    except Exception as e:  # Bedrock down, throttled or no access: say so instead of a bare 500
+        raise HTTPException(502, f"vision service failed: {type(e).__name__}: {e}")
+    rid = uuid.uuid4().hex[:12]
+    stored = None
+    try:
+        stored = save(f"photos/{rid}.{fmt}", img, f"image/{fmt}")
+        save(f"results/{rid}.json", json.dumps({"building": building, "problems": probs}), "application/json")
+    except Exception:  # storage is for our records; never fail the user's request over it
+        stored = None
+    return {"ok": not probs, "id": rid, "building": building, "problems": probs, "photo_key": stored}

@@ -5,250 +5,217 @@
    "type": "room",
    "label": "MACHINE, LIGHT AND SOUND",
    "use": "gallery",
-   "x": 63.6,
+   "x": 64.5,
    "z": 5.1,
-   "w": 28.6,
+   "w": 33.0,
    "d": 10.2,
-   "people": 87
+   "people": 102
   },
   {
    "id": "principles_of_mechanics",
    "type": "room",
    "label": "PRINCIPLES OF MECHANICS",
    "use": "gallery",
-   "x": 52.6,
-   "z": 16.2,
+   "x": 51.6,
+   "z": 16.5,
    "w": 10.8,
    "d": 13.2,
-   "people": 42
+   "people": 43
   },
   {
    "id": "electricity_magnetism",
    "type": "room",
    "label": "ELECTRICITY AND MAGNETISM",
    "use": "gallery",
-   "x": 64.2,
-   "z": 16.2,
-   "w": 12.5,
+   "x": 63.9,
+   "z": 16.5,
+   "w": 13.8,
    "d": 13.2,
-   "people": 49
+   "people": 55
   },
   {
    "id": "mathematics_gallery",
    "type": "room",
    "label": "MATHEMATICS GALLERY",
    "use": "gallery",
-   "x": 74.2,
-   "z": 16.2,
-   "w": 7.4,
+   "x": 75.9,
+   "z": 16.5,
+   "w": 10.2,
    "d": 13.2,
-   "people": 29
+   "people": 40
   },
   {
    "id": "water_transport_gallery",
    "type": "room",
    "label": "WATER TRANSPORT GALLERY",
    "use": "other",
-   "x": 54.5,
-   "z": 29.4,
-   "w": 14.6,
+   "x": 53.9,
+   "z": 29.7,
+   "w": 15.4,
    "d": 13.2,
-   "people": 58
-  },
-  {
-   "id": "office",
-   "type": "room",
-   "label": "OFFICE",
-   "use": "office",
-   "x": 66.5,
-   "z": 29.4,
-   "w": 9.3,
-   "d": 13.2,
-   "people": 18
-  },
-  {
-   "id": "reception",
-   "type": "room",
-   "label": "RECEPTION",
-   "use": "lobby",
-   "x": 76.1,
-   "z": 29.4,
-   "w": 9.9,
-   "d": 13.2,
-   "people": 39
+   "people": 61
   },
   {
    "id": "rail_transport_in_india",
    "type": "room",
    "label": "RAIL TRANSPORT IN INDIA",
    "use": "gallery",
-   "x": 71.4,
-   "z": 42.1,
-   "w": 19.2,
-   "d": 12.3,
-   "people": 71
+   "x": 65.7,
+   "z": 29.7,
+   "w": 8.2,
+   "d": 13.2,
+   "people": 33
+  },
+  {
+   "id": "office",
+   "type": "room",
+   "label": "OFFICE",
+   "use": "office",
+   "x": 66.6,
+   "z": 32.5,
+   "w": 6.5,
+   "d": 7.8,
+   "people": 8
+  },
+  {
+   "id": "reception",
+   "type": "room",
+   "label": "RECEPTION",
+   "use": "lobby",
+   "x": 74.9,
+   "z": 33.7,
+   "w": 10.2,
+   "d": 5.3,
+   "people": 16
   },
   {
    "id": "computing_machines",
    "type": "room",
    "label": "COMPUTING MACHINES",
    "use": "gallery",
-   "x": 36.0,
-   "z": 30.2,
-   "w": 5.4,
-   "d": 8.2,
-   "people": 13
+   "x": 35.0,
+   "z": 31.2,
+   "w": 4.3,
+   "d": 6.9,
+   "people": 9
   },
   {
    "id": "aviation_and_space",
    "type": "room",
    "label": "AVIATION AND SPACE",
    "use": "gallery",
-   "x": 42.2,
-   "z": 30.2,
-   "w": 6.9,
-   "d": 8.2,
-   "people": 17
+   "x": 42.3,
+   "z": 31.2,
+   "w": 3.1,
+   "d": 6.9,
+   "people": 6
   },
   {
    "id": "paranormal",
    "type": "room",
    "label": "PARANORMAL",
    "use": "gallery",
-   "x": 25.9,
-   "z": 29.0,
-   "w": 14.7,
-   "d": 10.7,
-   "people": 47
+   "x": 24.2,
+   "z": 27.6,
+   "w": 13.5,
+   "d": 7.8,
+   "people": 32
   },
   {
-   "id": "audivisual_hall",
+   "id": "audiovisual_hall",
    "type": "room",
    "label": "AUDIOVISUAL HALL",
    "use": "seated_hall",
-   "x": 9.3,
-   "z": 39.2,
-   "w": 18.5,
-   "d": 6.6,
-   "people": 183
-  },
-  {
-   "id": "washroom",
-   "type": "room",
-   "label": "WASHROOM",
-   "use": "washroom",
-   "x": 3.7,
-   "z": 44.2,
-   "w": 7.4,
-   "d": 3.3,
-   "people": 7
-  },
-  {
-   "id": "drinking_water",
-   "type": "room",
-   "label": "DRINKING WATER",
-   "use": "other",
-   "x": 13.0,
-   "z": 44.2,
-   "w": 11.1,
-   "d": 3.3,
-   "people": 11
+   "x": 8.4,
+   "z": 39.8,
+   "w": 16.8,
+   "d": 5.8,
+   "people": 146
   },
   {
    "id": "p1",
    "type": "corridor",
-   "x": 48.2,
-   "z": 9.1
+   "x": 16.8,
+   "z": 31.5
   },
   {
    "id": "p2",
    "type": "corridor",
-   "x": 58.1,
-   "z": 9.1
+   "x": 30.9,
+   "z": 31.5
   },
   {
    "id": "p3",
    "type": "corridor",
-   "x": 70.5,
-   "z": 9.1
+   "x": 37.1,
+   "z": 34.7
   },
   {
    "id": "p4",
    "type": "corridor",
-   "x": 74.2,
-   "z": 9.1
+   "x": 43.9,
+   "z": 34.7
   },
   {
    "id": "p5",
    "type": "corridor",
-   "x": 48.2,
-   "z": 22.3
+   "x": 57.0,
+   "z": 23.2
   },
   {
    "id": "p6",
    "type": "corridor",
-   "x": 60.0,
-   "z": 22.3
+   "x": 61.6,
+   "z": 23.2
   },
   {
    "id": "p7",
    "type": "corridor",
-   "x": 66.8,
-   "z": 22.3
+   "x": 69.8,
+   "z": 23.2
   },
   {
    "id": "p8",
    "type": "corridor",
-   "x": 75.4,
-   "z": 22.3
+   "x": 69.8,
+   "z": 28.6
   },
   {
    "id": "p9",
    "type": "corridor",
-   "x": 60.6,
-   "z": 35.4
+   "x": 80.0,
+   "z": 31.5
   },
   {
    "id": "p10",
    "type": "corridor",
-   "x": 69.3,
-   "z": 35.4
+   "x": 61.6,
+   "z": 36.4
   },
   {
    "id": "p11",
    "type": "corridor",
-   "x": 35.9,
-   "z": 25.6
+   "x": 69.8,
+   "z": 36.4
   },
   {
    "id": "p12",
    "type": "corridor",
-   "x": 42.0,
-   "z": 25.6
-  },
-  {
-   "id": "p13",
-   "type": "corridor",
-   "x": 26.0,
-   "z": 23.9
-  },
-  {
-   "id": "p14",
-   "type": "corridor",
-   "x": 9.3,
-   "z": 36.3
-  },
-  {
-   "id": "p15",
-   "type": "corridor",
-   "x": 3.7,
-   "z": 43.7
+   "x": 16.8,
+   "z": 42.7
   },
   {
    "id": "EXIT_MAIN",
    "type": "exit",
-   "x": 17.3,
-   "z": 42.9,
+   "x": 14.5,
+   "z": 42.7,
+   "label": "main entrance"
+  },
+  {
+   "id": "EXIT_1",
+   "type": "exit",
+   "x": 57.1,
+   "z": 31.5,
    "label": "main entrance"
   }
  ],
@@ -261,169 +228,151 @@
   },
   {
    "from": "principles_of_mechanics",
-   "to": "p2",
-   "width": 1.5,
-   "kind": "door"
-  },
-  {
-   "from": "electricity_magnetism",
-   "to": "p3",
-   "width": 1.5,
-   "kind": "door"
-  },
-  {
-   "from": "mathematics_gallery",
-   "to": "p4",
-   "width": 1.5,
-   "kind": "door"
-  },
-  {
-   "from": "water_transport_gallery",
    "to": "p5",
    "width": 1.5,
    "kind": "door"
   },
   {
-   "from": "office",
+   "from": "electricity_magnetism",
    "to": "p6",
    "width": 1.5,
    "kind": "door"
   },
   {
-   "from": "reception",
+   "from": "mathematics_gallery",
    "to": "p7",
+   "width": 1.5,
+   "kind": "door"
+  },
+  {
+   "from": "water_transport_gallery",
+   "to": "p10",
    "width": 1.5,
    "kind": "door"
   },
   {
    "from": "rail_transport_in_india",
-   "to": "p8",
+   "to": "p10",
+   "width": 1.5,
+   "kind": "door"
+  },
+  {
+   "from": "office",
+   "to": "p11",
+   "width": 1.5,
+   "kind": "door"
+  },
+  {
+   "from": "reception",
+   "to": "p9",
    "width": 1.5,
    "kind": "door"
   },
   {
    "from": "computing_machines",
-   "to": "p11",
+   "to": "p3",
    "width": 1.2,
    "kind": "door"
   },
   {
    "from": "aviation_and_space",
-   "to": "p12",
+   "to": "p4",
    "width": 1.2,
    "kind": "door"
   },
   {
    "from": "paranormal",
-   "to": "p13",
+   "to": "p2",
    "width": 1.5,
    "kind": "door"
   },
   {
-   "from": "audivisual_hall",
-   "to": "p14",
+   "from": "audiovisual_hall",
+   "to": "p12",
    "width": 1.5,
-   "kind": "door"
-  },
-  {
-   "from": "washroom",
-   "to": "p15",
-   "width": 1.2,
    "kind": "door"
   },
   {
    "from": "p1",
    "to": "p2",
-   "width": 2.0,
+   "width": 3.0,
    "kind": "corridor"
   },
   {
    "from": "p2",
    "to": "p3",
-   "width": 2.0,
+   "width": 3.0,
    "kind": "corridor"
   },
   {
    "from": "p3",
    "to": "p4",
-   "width": 2.0,
+   "width": 3.0,
    "kind": "corridor"
   },
   {
    "from": "p4",
-   "to": "p7",
-   "width": 2.0,
+   "to": "p2",
+   "width": 3.0,
    "kind": "corridor"
   },
   {
    "from": "p5",
    "to": "p6",
-   "width": 2.0,
+   "width": 3.0,
    "kind": "corridor"
   },
   {
    "from": "p6",
    "to": "p7",
-   "width": 2.0,
+   "width": 3.0,
    "kind": "corridor"
   },
   {
    "from": "p7",
    "to": "p8",
-   "width": 2.0,
+   "width": 3.0,
    "kind": "corridor"
   },
   {
    "from": "p8",
-   "to": "EXIT_MAIN",
-   "width": 2.0,
+   "to": "p9",
+   "width": 3.0,
+   "kind": "corridor"
+  },
+  {
+   "from": "p10",
+   "to": "p11",
+   "width": 3.0,
    "kind": "corridor"
   },
   {
    "from": "p11",
-   "to": "p12",
-   "width": 2.0,
+   "to": "p8",
+   "width": 3.0,
    "kind": "corridor"
   },
   {
    "from": "p12",
-   "to": "p13",
-   "width": 2.0,
-   "kind": "corridor"
-  },
-  {
-   "from": "p13",
-   "to": "p14",
-   "width": 2.0,
-   "kind": "corridor"
-  },
-  {
-   "from": "p14",
-   "to": "p15",
-   "width": 2.0,
-   "kind": "corridor"
-  },
-  {
-   "from": "drinking_water",
-   "to": "p14",
-   "width": 1.2,
+   "to": "EXIT_MAIN",
+   "width": 1.5,
    "kind": "door"
   },
   {
-   "from": "p5",
+   "from": "EXIT_1",
+   "to": "p10",
+   "width": 1.5,
+   "kind": "door"
+  },
+  {
+   "from": "p1",
    "to": "p12",
    "width": 2.0,
    "kind": "corridor"
   },
   {
-   "from": "p9",
-   "to": "p10",
-   "width": 2.0,
-   "kind": "corridor"
-  },
-  {
-   "from": "office",
-   "to": "p10",
+   "from": "p4",
+   "to": "water_transport_gallery",
    "width": 1.2,
    "kind": "door"
   }
@@ -433,16 +382,17 @@
  "vision": {
   "model": "us.amazon.nova-pro-v1:0",
   "width_m": 81.0,
-  "calls": 1,
+  "calls": 2,
   "usage": {
-   "inputTokens": 2400,
-   "outputTokens": 1865
+   "inputTokens": 4495,
+   "outputTokens": 1677
   },
+  "exits_added": [
+   "main entrance"
+  ],
   "auto_links": [
-   "drinking_water-p14",
-   "p5-p12",
-   "p9-p10",
-   "office-p10"
+   "p1-p12",
+   "p4-water_transport_gallery"
   ],
   "photo_px": [
    1920,
