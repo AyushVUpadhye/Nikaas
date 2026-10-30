@@ -20,3 +20,4 @@ Newest at the bottom. Check this section after every `git pull`.
 - **11:47** — The Lambda entry point is ready: set the SAM `Handler` to `nikaas.api.handler` (Mangum wraps the FastAPI app; `mangum` is in `requirements.txt`). Runtime `python3.11`.
 - **11:47** — Chirag's laptop has no AWS credentials yet. Set it up first so he can test deploys too.
 - **11:58** — Run every vision result through `nikaas.building.validate(d)` (or `POST /validate`); it returns readable problems like `room staff cannot reach any exit`. Put them in `runs/vision_check.md`.
+- **12:00** — No public floor plan of the CSE Labs exists online; if anyone can photograph a real posted evacuation map, test vision on it and compare with `data/lab_block.json`'s format.

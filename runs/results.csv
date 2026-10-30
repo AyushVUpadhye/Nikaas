@@ -1,3 +1,6 @@
 when,building,sha256,plan,blocked,people,total_time_s,per_exit,bottleneck,peak_queue,commit
 2026-10-30T11:28:34,sample_floor.json,b856dff359c2,nearest,,300,119.0,"{'A': 174, 'B': 126}",c_w-A,92,uncommitted
 2026-10-30T11:28:35,sample_floor.json,b856dff359c2,nearest,A,300,196.75,"{'A': 0, 'B': 300}",c_e-B,162,uncommitted
+2026-10-30T12:00:30,lab_block.json,1ca510ac6c25,nearest,,528,211.75,"{'A': 264, 'B': 194, 'C': 70}",m-34-A,153,5ce810f
+2026-10-30T12:00:31,lab_block.json,1ca510ac6c25,nearest,B,528,305.75,"{'A': 388, 'B': 0, 'C': 140}",m-34-A,224,5ce810f
+2026-10-30T12:00:31,lab_block.json,1ca510ac6c25,nearest,A,528,227.0,"{'A': 0, 'B': 458, 'C': 70}",m30-B,161,5ce810f
