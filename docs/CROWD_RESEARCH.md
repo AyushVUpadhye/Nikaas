@@ -51,6 +51,24 @@ concourse near Gate 6. Primary cause: single narrow gate serving the metro-side 
 Relevance to Nikaas: Crowd mode detects exactly this pattern — a narrow corridor near an exit
 accumulates dangerous density that the nearest-exit plan does not surface.
 
+## National Building Code of India 2016 — Part 4 (Fire and Life Safety)
+
+Relevant provisions for crowd and exit sizing:
+
+| Requirement | NBC 2016 Part 4 value |
+|---|---|
+| Minimum exit width | 1.0 m (≤ 50 persons); +300 mm per additional 50 persons |
+| Travel distance to exit (unsprinklered) | ≤ 30 m |
+| Travel distance to exit (sprinklered) | ≤ 45 m |
+| Minimum 2 exits required | Any occupancy > 50 persons |
+| Assembly occupancies (stadia, theatres) | Exit capacity: 1 exit unit = 560 mm; 1 person/unit/0.75 s |
+
+**Source:** Bureau of Indian Standards, *National Building Code of India 2016*, Part 4: Fire and Life Safety.
+https://www.bis.gov.in/
+
+Relevance to Nikaas: Gate South at Chinnaswamy (modelled at 2.0 m) meets NBC minimum width for ~80 persons,
+but the south stand alone holds ~4 800 people — a factor-of-60 mismatch.
+
 ## Threshold used in nikaas/crowd.py
 
 ```
@@ -61,3 +79,7 @@ CONCERN_THRESHOLD = 2.7  # p/m²  (LoS E boundary; Green Guide cap)
 These are the values the `crush_risk` list is generated against.
 At 4.0 p/m² crowd forces can reach levels recorded in fatal crushes; we flag it as `crush`.
 At 2.7 p/m² flow begins to break down; we flag it as `concern`.
+
+The API also returns `first_crush_t` (seconds) — the earliest simulated time any edge exceeds the
+crush threshold.  For the stadium model this answers: "how many seconds into a panic does Gate South
+become dangerous?"  In the pitch: quote this number with its source (`runs/`).

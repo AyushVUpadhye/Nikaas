@@ -12,6 +12,7 @@ from fastapi.middleware.gzip import GZipMiddleware
 from pydantic import BaseModel
 
 from .building import load, nearest_plan, validate
+from .crowd import analyse as crowd_analyse
 from .optimise import beat_nikaas_score, optimise
 from .sim import simulate
 
@@ -70,6 +71,11 @@ def run(req: SimRequest):
     except (KeyError, ValueError) as e:
         raise HTTPException(422, str(e))
     out["plan"] = plan
+    # crowd density analysis: crush-risk on every corridor/door edge over time
+    try:
+        out["crowd"] = crowd_analyse(out, req.building)
+    except Exception:  # never fail /simulate because of crowd analysis
+        out["crowd"] = None
     return out
 
 
