@@ -15,13 +15,17 @@ type Run = {
 // Live API (AWS). Without it the page falls back to saved runs, so ?demo=1 and offline demos still work.
 const API = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, '') ?? ''
 const DEMO = new URLSearchParams(location.search).has('demo')
-// Two versions of the same building: digitised by hand, and read from the photo by Amazon Nova Pro (nikaas/vision.py)
+// The same museum floor digitised by hand and read from the photo by Amazon Nova Pro (nikaas/vision.py), plus a stadium
 const SOURCES = [
   { id: 'hand', label: 'Hand-digitised', file: 'data/iit_kgp_museum.json',
     saved: { '': 'data/frames_iit_kgp_nearest.json', MAIN: 'data/frames_iit_kgp_blockedMAIN.json',
       'nikaas:': 'data/frames_iit_kgp_nikaas.json', 'nikaas:MAIN': 'data/frames_iit_kgp_nikaas_blockedMAIN.json' } as Record<string, string> },
   { id: 'vision', label: 'Read from the photo (Amazon Nova Pro)', file: 'data/vision_nova_pro.json',
     saved: { '': 'data/frames_vision_nova_pro_nearest.json' } as Record<string, string> },
+  // the scale story: Bhumika's representative stadium scaled to 2,001 people. Its runs are precomputed
+  // (scripts/precompute_stadium.py): the optimiser takes ~13 s here, too slow for a live call.
+  { id: 'stadium', label: 'Stadium gates (2,001 people)', file: 'data/stadium_scaled.json', offline: true, frameEvery: 5,
+    saved: { '': 'data/frames_stadium_nearest.json', 'nikaas:': 'data/frames_stadium_nikaas.json' } as Record<string, string> },
 ]
 
 const STATE_VAR: Record<string, string> = { walking: '--walk', queuing: '--queue', stairs: '--stairs', inside: '--inside' }
@@ -39,18 +43,19 @@ async function post(path: string, body: unknown) {
 }
 
 // plan 'nearest' = today's rule; 'nikaas' = Ayush's optimiser (/optimise), then simulated with that plan
-async function fetchRun(building: Building, blocked: string[], SAVED: Record<string, string>, plan: string): Promise<Run> {
+async function fetchRun(building: Building, blocked: string[], src: typeof SOURCES[number], plan: string): Promise<Run> {
+  const SAVED = src.saved, frame_every = src.frameEvery ?? 1
   const b = blocked.slice().sort().join('+')
   const key = plan === 'nikaas' ? `nikaas:${b}` : b
-  if ((!API || DEMO) && key in SAVED) return (await fetch(SAVED[key])).json()
+  if ((!API || DEMO || src.offline) && key in SAVED) return (await fetch(SAVED[key])).json()
   if (!API) throw new Error('This scenario needs the live API (set VITE_API_URL).')
-  if (plan !== 'nikaas') return post('/simulate', { building, blocked })
+  if (plan !== 'nikaas') return post('/simulate', { building, blocked, frame_every })
   const [opt, nearest] = await Promise.all([
-    post('/optimise', { building, blocked, simulate: true }),
+    post('/optimise', { building, blocked, simulate: true, frame_every }),
     post('/simulate', { building, blocked, frame_every: 1e6 }),
   ])
   // newer API returns the simulated plan in the same call; older deployments need a second request
-  const run = opt.run ?? await post('/simulate', { building, blocked, plan: opt.plan })
+  const run = opt.run ?? await post('/simulate', { building, blocked, plan: opt.plan, frame_every })
   return { ...run, lower_bound_s: opt.lower_bound_s, nearest_s: nearest.total_time_s }
 }
 
@@ -59,7 +64,7 @@ export default function App() {
   const [source, setSource] = useState(SOURCES[0])
   const [blocked, setBlocked] = useState<string[]>([])
   const [run, setRun] = useState<Run>()
-  const [baseline, setBaseline] = useState<number>()
+  const [baseline, setBaseline] = useState<Record<string, number>>({}) // all-exits-open time per plan
   const [error, setError] = useState('')
   const [i, setI] = useState(0)
   const [playing, setPlaying] = useState(true)
@@ -70,13 +75,13 @@ export default function App() {
   useEffect(() => { fetch('data/vision_nova_pro_qa.json').then(r => r.json()).then(setQa).catch(() => {}) }, [])
   const canvas = useRef<HTMLCanvasElement>(null)
 
-  useEffect(() => { setBuilding(undefined); setRun(undefined); setBlocked([]); setBaseline(undefined); fetch(source.file).then(r => r.json()).then(setBuilding) }, [source])
+  useEffect(() => { setBuilding(undefined); setRun(undefined); setBlocked([]); setBaseline({}); fetch(source.file).then(r => r.json()).then(setBuilding) }, [source])
   useEffect(() => {
     if (!building) return
     let live = true
     setRun(undefined); setError(''); setI(0)
-    fetchRun(building, blocked, source.saved, plan)
-      .then(r => { if (live) { setRun(r); if (!blocked.length && plan === 'nearest') setBaseline(r.total_time_s) } })
+    fetchRun(building, blocked, source, plan)
+      .then(r => { if (live) { setRun(r); if (!blocked.length) setBaseline(b => ({ ...b, [plan]: r.total_time_s })) } })
       .catch(e => live && setError(String(e.message ?? e)))
     return () => { live = false }
   }, [building, blocked, plan])
@@ -173,7 +178,8 @@ export default function App() {
 
   const counts: Record<string, number> = {}
   for (const p of f?.people ?? []) counts[p[2]] = (counts[p[2]] ?? 0) + 1
-  const delta = run && baseline !== undefined && blocked.length ? run.total_time_s - baseline : undefined
+  // compare a blocked run with the same plan with all exits open (never across plans)
+  const delta = run && baseline[plan] !== undefined && blocked.length ? run.total_time_s - baseline[plan] : undefined
 
   return (
     <div className="page">
@@ -243,7 +249,7 @@ export default function App() {
           <Stat label="Bottleneck (peak queue)" value={run ? `${run.bottleneck} (${run.peak_queue})` : '…'} />
           <Stat label="People per exit" value={run ? Object.entries(run.per_exit).map(([k, v]) => `${k} ${v}`).join(' · ') : '…'} />
           <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 12 }}>
-            {API && !DEMO ? 'Live: simulated on AWS for every change.' : 'Saved runs (demo mode).'} Simulator validated against the SFPE handbook example.
+            {!API || DEMO ? 'Saved runs (demo mode).' : source.offline && !blocked.length ? 'Precomputed run (scripts/precompute_stadium.py); blocking a gate simulates it live on AWS.' : 'Live: simulated on AWS for every change.'} Simulator validated against the SFPE handbook example.
           </div>
         </aside>
       </div>
