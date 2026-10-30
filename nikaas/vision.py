@@ -17,6 +17,7 @@ import struct
 from concurrent.futures import ThreadPoolExecutor
 
 from .building import validate
+from .graph_qa import analyze_graph
 
 MODEL_ID = os.environ.get("BEDROCK_MODEL", "us.amazon.nova-pro-v1:0")
 REGION = os.environ.get("BEDROCK_REGION", "us-east-1")
@@ -149,6 +150,8 @@ def to_building(g, width_m, size=None):
         ed = {"from": str(e.get("from")), "to": str(e.get("to")), "width": _num(e.get("width"), 1.0)}
         if e.get("kind") in ("door", "corridor", "stair"):
             ed["kind"] = e["kind"]
+        ed["inferred"] = bool(e.get("inferred", False))
+        ed["source"] = str(e.get("source", "model"))
         edges.append(ed)
     return {"nodes": nodes, "edges": edges}
 
@@ -184,7 +187,8 @@ def merge_exits(g, found, min_gap=30):
         if pts:
             near = min(pts, key=lambda p: math.dist(at, p["at"]))
             g.setdefault("links", []).append({"from": eid, "to": near["id"], "width": _num(x.get("width"), 1.5),
-                                              "kind": "stair" if x.get("kind") == "stair" else "door"})
+                                              "kind": "stair" if x.get("kind") == "stair" else "door",
+                                              "inferred": True, "source": "merge_exits"})
         added.append(x.get("label") or eid)
     return added
 
@@ -201,7 +205,8 @@ def connect(b):
         return math.hypot(nodes[a]["x"] - nodes[c]["x"], nodes[a]["z"] - nodes[c]["z"])
 
     def link(a, c, width, kind):
-        b["edges"].append({"from": a, "to": c, "width": width, "kind": kind})
+        b["edges"].append({"from": a, "to": c, "width": width, "kind": kind,
+                           "inferred": True, "source": "auto_connect"})
         added.append(f"{a}-{c}")
 
     walk = [i for i, n in nodes.items() if n["type"] == "corridor"]
@@ -301,7 +306,9 @@ def read_map(image, fmt="jpeg", width_m=80.0, name="building from photo", model_
         added = connect(building)
         probs = validate(building)
     building = building or {"nodes": [], "edges": []}
+    qa_report = analyze_graph(building)
     building.update(name=name, units="m", vision={"model": model_id, "width_m": width_m, "calls": calls,
                                                   "usage": usage, "exits_added": new_exits, "auto_links": added,
-                                                  "photo_px": list(size) if size else None})
+                                                  "photo_px": list(size) if size else None,
+                                                  "qa": qa_report})
     return building, probs
