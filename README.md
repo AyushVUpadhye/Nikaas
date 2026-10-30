@@ -19,8 +19,10 @@ room the exit that empties the building fastest, re-planning when a stair is blo
 Built from scratch at **AfterHours 1.0** (DBIT, 30–31 Oct 2026), Theme 03: Simulation & Digital
 Twins, by **TheGoodEngineers** (team AH50): Ayush V U, Bhumika G, Abhijeet, Chirag R H.
 
-> Status: in progress during the hackathon. Every number in this README will come from a file in
-> `runs/`. If a number has no file behind it, it is not here.
+**Working today:** simulator · API · web UI (2D + 3D) · Crowd mode density analysis · stadium building · SFPE validation
+**Not built yet:** multi-floor animation · NBC distance check · optimiser UI in web
+
+> Every number above comes from `runs/` or `docs/RESULTS.md`. If a number has no file behind it, it is not here.
 
 ## Validated
 The simulator reproduces the SFPE Engineering Guide's Example 1 (300 people, two doors, two stairs):
