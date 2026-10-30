@@ -1,7 +1,7 @@
 # Nikaas — who does what (AfterHours 1.0 finale, deadline 31 Oct 09:30)
 
-Each section below is self-contained: paste your own section into your AI coding agent as the
-prompt. Read `docs/CONTRACT.md` first. Commit at least every hour (mandatory checkpoints):
+Each section below is self-contained: it lists the files you own and how to know you are done.
+Read `docs/CONTRACT.md` first. Commit at least every hour (mandatory checkpoints):
 small commits, clear messages, `git pull --rebase` before `git push`.
 
 Team rules
@@ -68,7 +68,7 @@ Fallback: if 3D is not ready by 03:00, the 2D player is the demo.
 ## Abhijeet — all AWS, photo → graph, README, pitch
 
 1. **AWS on every laptop (now):** IAM user per member, `aws configure` (region `ap-south-1`), billing alarm ₹500,
-   Bedrock model access (Nova or Claude vision). Done when `aws sts get-caller-identity` works on all 4 laptops.
+   Bedrock model access (Amazon Nova, vision-capable). Done when `aws sts get-caller-identity` works on all 4 laptops.
 2. **Deploy skeleton (by 15:30):** `template.yaml` (AWS SAM): HTTP API → Lambda (Python 3.11, `nikaas.api` via
    Mangum) + S3 bucket for the web build. `sam build && sam deploy`. Done when `/health` answers on the public URL.
 3. **Photo → graph (by 19:00):** `nikaas/vision.py`: send the map photo to Bedrock (`converse` with an image),
