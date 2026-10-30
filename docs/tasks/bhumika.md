@@ -36,6 +36,20 @@ answers: *where will the crowd get dangerously dense, and when?*
 8. **Finalist PPT (by 23:00)** — update the idea PPT (offline template, max 5 slides) with real numbers and app screenshots.
 9. **Demo video (07:30–08:30)** — record the website's `?demo=1` story (Chirag provides it), ≤ 3 min, captions, no speed-up.
 
+## New work (assigned 13:59)
+10. **Showcase film of the website (by 19:00 draft, final after the 07:30 freeze)** — like Nikhil Bhima's
+    "redesigned the landing page" post on X: a ~25 s, high-resolution (2880×1576, i.e. 1440×788 at 2× device scale)
+    screen recording of the site, no voice, smooth and slow. Record it with Playwright, not by hand:
+    `browser.new_context(viewport={"width":1440,"height":788}, device_scale_factor=2, record_video_dir=...)`,
+    then scroll Home top-to-bottom with `page.mouse.wheel` in small steps (smooth, ~6 s), open the Twin, block an exit,
+    switch to the Nikaas plan. Save the script as `video/showcase.py` and the film as `video/nikaas_showcase.mp4`.
+    Never speed it up; cut steps instead.
+11. **Fix Crowd mode densities** (see my 13:50 note): only count people outside rooms, cap test at 10 p/m².
+12. **Judge's-eye review of every page, every 2 hours** — open Home, Twin, Beat Nikaas, Evidence at 1440, 1024 and
+    400 px. List anything broken, unclear, unproven or ugly in your notes section (I fix the website; you find problems).
+13. **Finalist slides** — update the 5-slide offline-template PPT with screenshots of the new site and numbers from
+    `docs/RESULTS.md` (keep fonts 14–18 pt).
+
 ## Keep improving (every hour until 07:30 freeze)
 Do not stop when the list is done. Each hour: `git pull`, read `docs/RESULTS.md` and `hackathon.md` for what changed,
 then pick one thing and commit it:
@@ -64,3 +78,4 @@ Newest at the bottom. Check this section after every `git pull`.
 - **13:42** — Reviewed Crowd mode: 10 crowd tests pass, 51 total, nice work on `first_crush_t` and `narrative()`. Three fixes I made: (1) `data/stadium_gates.json` was saved with a BOM, which crashed the loader; the loader now tolerates it. (2) `CROWD_RESEARCH.md` said the Chinnaswamy crush was at Gate 6 with 6–7 p/m² and a single narrow gate as the cause. Wikipedia says crushes happened at gates 2, 2A, 6, 7, 15, 17, 18 and 21, and I found no source for the density, so I removed both. Please never state a cause or figure for a real tragedy without a source you opened. (3) The stadium is representative, not Chinnaswamy. Do not say "we modelled Chinnaswamy" in the pitch; say "a stadium like Chinnaswamy".
 - **13:47** — **Crowd mode cannot run live on the stadium.** 14,600 people do not finish within the simulator's 1,800 s limit (Gate South queue 4,005, `runs/results.csv`), 300 simulated seconds already take ~2.8 s of CPU, and frames for 14,600 people would be far over the 6 MB Lambda response. Choose one before 17:00: (a) precompute the stadium run offline (`simulate(..., max_t=4000, frame_every=10)`) and save the frames + crowd result to `web/public/data/` for the demo, or (b) scale the representative stadium to ~2,000 people so it runs live. Tell me which and I will put it in the website.
 - **13:52** — Reviewed Crowd mode output. **Densities are not physical:** IIT KGP nearest-exit gives max_density 17.05 p/m² and 1,017 crush entries; lab block (B blocked) 21.67 p/m² and 1,945 entries. Real crowds top out around 8-9 p/m², so judges will catch this. Likely cause: people still inside a room (state `inside`, or `queuing` before their first door) are assigned to the nearest edge, often a short door edge with a tiny area. Suggested fix in `crowd.py`: count only people whose state is `walking`, `queuing` or `stairs` and who are outside rooms (point not inside any room rectangle from the building), and add a test that no edge exceeds a physical cap (e.g. 10 p/m²) on `data/iit_kgp_museum.json`. Also: `/simulate` now runs crowd analysis only with `"crowd": true` (it doubled the cost of every tap-to-block), see `docs/CONTRACT.md`.
+- **13:59** — New tasks 10–13 above. Priority order today: 11 (crowd densities) → 12 (review) → 10 (showcase film draft) → 13 (slides). The website is redesigned (separate pages: Home, Twin, Beat Nikaas, Evidence); please review it from the judges' side.
