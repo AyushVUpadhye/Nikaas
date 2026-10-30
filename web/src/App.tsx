@@ -1,230 +1,414 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import View3D from './View3D.tsx'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import type { Building, SimResult, Frame } from './types'
+import Canvas2D from './components/Canvas2D'
+import View3D from './components/View3D'
 
-type Node = { id: string; type: 'room' | 'corridor' | 'exit'; x: number; z: number; w?: number; d?: number; label?: string }
-type Building = { name: string; nodes: Node[]; edges: { from: string; to: string; width: number }[] }
-type Frame = { t: number; people: [number, number, string][] }
-type Run = {
-  total_time_s: number; per_exit: Record<string, number>; bottleneck: string; peak_queue: number
-  frames: Frame[]; door_routes?: Record<string, string[][]>
-}
-
-// Live API (AWS). Without it the page falls back to saved runs, so ?demo=1 and offline demos still work.
-const API = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, '') ?? ''
+const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
 const DEMO = new URLSearchParams(location.search).has('demo')
-// Two versions of the same building: digitised by hand, and read from the photo by Amazon Nova Pro (nikaas/vision.py)
-const SOURCES = [
-  { id: 'hand', label: 'Hand-digitised', file: 'data/iit_kgp_museum.json',
-    saved: { '': 'data/frames_iit_kgp_nearest.json', MAIN: 'data/frames_iit_kgp_blockedMAIN.json' } as Record<string, string> },
-  { id: 'vision', label: 'Read from the photo (Amazon Nova Pro)', file: 'data/vision_nova_pro.json',
-    saved: { '': 'data/frames_vision_nova_pro_nearest.json' } as Record<string, string> },
-]
 
-const STATE_VAR: Record<string, string> = { walking: '--walk', queuing: '--queue', stairs: '--stairs', inside: '--inside' }
-const LEGEND: [string, string, string][] = [
-  ['out', 'Evacuated', '--ink'], ['stairs', 'On the stairs', '--stairs'], ['queuing', 'Queuing', '--queue'],
-  ['walking', 'Walking', '--walk'], ['inside', 'Still inside', '--inside'],
-]
-const fmt = (s: number) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(Math.floor(s % 60)).padStart(2, '0')}`
-const cssVar = (v: string) => getComputedStyle(document.documentElement).getPropertyValue(v).trim()
-
-async function fetchRun(building: Building, blocked: string[], SAVED: Record<string, string>): Promise<Run> {
-  const key = blocked.slice().sort().join('+')
-  if ((!API || DEMO) && key in SAVED) return (await fetch(SAVED[key])).json()
-  if (!API) throw new Error('This scenario needs the live API (set VITE_API_URL).')
-  const r = await fetch(`${API}/simulate`, {
-    method: 'POST', headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ building, blocked }),
-  })
-  if (!r.ok) throw new Error(`Simulator error ${r.status}`)
-  return r.json()
+const STATE_COLORS: Record<string, string> = {
+  walking: '#FF8C00',
+  queuing: '#FF3030',
+  stairs: '#4488FF',
+  inside: '#888',
 }
+
+type Speed = 1 | 2 | 4
+type View = '2d' | '3d' | 'side'
 
 export default function App() {
-  const [building, setBuilding] = useState<Building>()
-  const [source, setSource] = useState(SOURCES[0])
+  const [building, setBuilding] = useState<Building | null>(null)
+  const [nearest, setNearest] = useState<SimResult | null>(null)
+  const [blockedResult, setBlockedResult] = useState<SimResult | null>(null)
+  const [optimise, setOptimise] = useState<SimResult | null>(null)
+
   const [blocked, setBlocked] = useState<string[]>([])
-  const [run, setRun] = useState<Run>()
-  const [baseline, setBaseline] = useState<number>()
-  const [error, setError] = useState('')
-  const [i, setI] = useState(0)
-  const [playing, setPlaying] = useState(true)
-  const [speed, setSpeed] = useState(4)
-  const [mode3d, setMode3d] = useState(true)
-  const canvas = useRef<HTMLCanvasElement>(null)
+  const [frameIdx, setFrameIdx] = useState(0)
+  const [playing, setPlaying] = useState(false)
+  const [speed, setSpeed] = useState<Speed>(1)
+  const [view, setView] = useState<View>('2d')
+  const [loading, setLoading] = useState(true)
+  const [apiLoading, setApiLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => { setBuilding(undefined); setRun(undefined); setBlocked([]); setBaseline(undefined); fetch(source.file).then(r => r.json()).then(setBuilding) }, [source])
-  useEffect(() => {
-    if (!building) return
-    let live = true
-    setRun(undefined); setError(''); setI(0)
-    fetchRun(building, blocked, source.saved)
-      .then(r => { if (live) { setRun(r); if (!blocked.length) setBaseline(r.total_time_s) } })
-      .catch(e => live && setError(String(e.message ?? e)))
-    return () => { live = false }
-  }, [building, blocked])
-  useEffect(() => {
-    if (!run || !playing) return
-    const id = setInterval(() => setI(k => Math.min(k + 1, run.frames.length - 1)), 1000 / speed)
-    return () => clearInterval(id)
-  }, [run, playing, speed])
+  const rafRef = useRef<number | null>(null)
+  const lastTimeRef = useRef<number | null>(null)
+  const fracRef = useRef(0)
 
-  // ?demo=1: a hands-free story for the demo video. Landing for 4 s, then the nearest-exit run,
-  // then the main entrance is blocked and the re-planned run plays. Uses saved runs only (no network).
-  const [caption, setCaption] = useState('')
+  // active sim: if blocked result available, show it; else nearest
+  const activeSim = (blocked.length > 0 && blockedResult) ? blockedResult : nearest
+
+  // Load building + nearest frames
   useEffect(() => {
-    if (!DEMO) return
-    const t = setTimeout(() => document.getElementById('try')?.scrollIntoView({ behavior: 'smooth' }), 4000)
-    return () => clearTimeout(t)
-  }, [])
-  useEffect(() => {
-    if (!DEMO || !run) return
-    if (!blocked.length) setCaption('Today: everyone takes the nearest exit. Watch where the queues form.')
-    else setCaption('The main entrance is blocked. Everyone is re-routed to the two exits left, live.')
-    const atEnd = i >= run.frames.length - 1
-    if (atEnd && !blocked.length) {
-      const t = setTimeout(() => setBlocked(['MAIN']), 2500)
-      return () => clearTimeout(t)
+    async function load() {
+      try {
+        const [bldResp, simResp] = await Promise.all([
+          fetch('/lab_block.json'),
+          fetch('/frames_lab_block_nearest.json'),
+        ])
+        const bld: Building = await bldResp.json()
+        const sim: SimResult = await simResp.json()
+        setBuilding(bld)
+        setNearest(sim)
+      } catch (e) {
+        setError('Failed to load data files')
+      } finally {
+        setLoading(false)
+      }
     }
-  }, [run, i, blocked])
+    load()
+  }, [])
 
-  const view = useMemo(() => {
-    if (!building) return undefined
-    const xs = building.nodes.map(n => n.x), zs = building.nodes.map(n => n.z)
-    return { x0: Math.min(...xs) - 6, z0: Math.min(...zs) - 6, x1: Math.max(...xs) + 6, z1: Math.max(...zs) + 6 }
-  }, [building])
-  const scale = (c: HTMLCanvasElement) => view ? Math.min(c.width / (view.x1 - view.x0), c.height / (view.z1 - view.z0)) : 1
-  const exits = building?.nodes.filter(n => n.type === 'exit') ?? []
-  const f = run?.frames[i]
+  // Animation loop
+  useEffect(() => {
+    if (!playing || !activeSim) return
+    const frames = activeSim.frames
+    const animate = (ts: number) => {
+      if (lastTimeRef.current === null) lastTimeRef.current = ts
+      const dt = (ts - lastTimeRef.current) / 1000
+      lastTimeRef.current = ts
+      fracRef.current += dt * speed
+      if (fracRef.current >= 1) {
+        const steps = Math.floor(fracRef.current)
+        fracRef.current -= steps
+        setFrameIdx(i => {
+          const next = i + steps
+          if (next >= frames.length - 1) { setPlaying(false); return frames.length - 1 }
+          return next
+        })
+      }
+      rafRef.current = requestAnimationFrame(animate)
+    }
+    rafRef.current = requestAnimationFrame(animate)
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current)
+      lastTimeRef.current = null
+      fracRef.current = 0
+    }
+  }, [playing, speed, activeSim])
 
-  const toggleExit = useCallback((id: string) => {
-    setBlocked(b => {
-      if (b.includes(id)) return b.filter(x => x !== id)
-      if (b.length + 1 >= exits.length) { setError('At least one exit must stay open.'); return b }
-      return [...b, id]
-    })
-  }, [exits.length])
+  const currentFrame: Frame | null = activeSim?.frames[frameIdx] ?? null
+  const totalFrames = activeSim?.frames.length ?? 1
 
-  function onCanvasClick(ev: React.MouseEvent<HTMLCanvasElement>) {
-    const c = canvas.current
-    if (!c || !view) return
-    const rect = c.getBoundingClientRect(), s = scale(c)
-    const px = (ev.clientX - rect.left) * (c.width / rect.width), pz = (ev.clientY - rect.top) * (c.height / rect.height)
-    const hit = exits.find(n => Math.hypot((n.x - view.x0) * s - px, (n.z - view.z0) * s - pz) < 22)
-    if (hit) toggleExit(hit.id)
+  const togglePlay = () => {
+    if (frameIdx >= totalFrames - 1) setFrameIdx(0)
+    setPlaying(p => !p)
   }
 
-  useEffect(() => {
-    const c = canvas.current, g = c?.getContext('2d')
-    if (!c || !g || !building || !view) return
-    const s = scale(c)
-    const P = (x: number, z: number): [number, number] => [(x - view.x0) * s, (z - view.z0) * s]
-    const byId = Object.fromEntries(building.nodes.map(n => [n.id, n]))
-    g.clearRect(0, 0, c.width, c.height)
-    g.lineCap = 'round'; g.lineJoin = 'round'
-    for (const e of building.edges) {
-      const [ax, az] = P(byId[e.from].x, byId[e.from].z), [bx, bz] = P(byId[e.to].x, byId[e.to].z)
-      g.strokeStyle = '#e2e6ea'; g.lineWidth = Math.max(2, e.width * s)
-      g.beginPath(); g.moveTo(ax, az); g.lineTo(bx, bz); g.stroke()
+  const handleClickExit = useCallback(async (exitId: string) => {
+    if (blocked.includes(exitId)) {
+      // unblock
+      const newBlocked = blocked.filter(b => b !== exitId)
+      setBlocked(newBlocked)
+      if (newBlocked.length === 0) setBlockedResult(null)
+      return
     }
-    // escape routes: one ribbon per door of each room, to its assigned exit
-    g.strokeStyle = cssVar('--route'); g.globalAlpha = 0.55; g.lineWidth = 3
-    for (const paths of Object.values(run?.door_routes ?? {})) for (const path of paths) {
-      if (!path.every(id => byId[id])) continue // run from another building: skip
-      g.beginPath(); path.forEach((id, k) => { const [x, z] = P(byId[id].x, byId[id].z); if (k) g.lineTo(x, z); else g.moveTo(x, z) }); g.stroke()
-    }
-    g.globalAlpha = 1
-    for (const n of building.nodes.filter(n => n.type === 'room')) {
-      const w = n.w ?? 4, d = n.d ?? 4, [x, z] = P(n.x - w / 2, n.z - d / 2)
-      g.fillStyle = '#fff'; g.strokeStyle = cssVar('--wall'); g.lineWidth = 2
-      g.fillRect(x, z, w * s, d * s); g.strokeRect(x, z, w * s, d * s)
-      g.fillStyle = cssVar('--muted'); g.font = '12px Segoe UI'; g.fillText(n.label ?? n.id, x + 4, z + 14, w * s - 8)
-    }
-    for (const n of exits) {
-      const [x, z] = P(n.x, n.z), off = blocked.includes(n.id)
-      g.fillStyle = cssVar(off ? '--queue' : '--accent'); g.beginPath(); g.arc(x, z, 11, 0, 7); g.fill()
-      if (off) { g.strokeStyle = '#fff'; g.lineWidth = 3; g.beginPath(); g.moveTo(x - 6, z - 6); g.lineTo(x + 6, z + 6); g.moveTo(x + 6, z - 6); g.lineTo(x - 6, z + 6); g.stroke() }
-      g.fillStyle = cssVar('--ink'); g.font = '600 12px Segoe UI'; g.textAlign = x > c.width * 0.8 ? 'right' : 'left'
-      g.fillText((off ? 'BLOCKED: ' : '') + (n.label ?? n.id), x + (g.textAlign === 'right' ? -16 : 16), z + 4); g.textAlign = 'left'
-    }
-    const f = run?.frames[i]
-    if (f) for (const [x, z, st] of f.people) {
-      if (st === 'out') continue
-      const [px, pz] = P(x, z)
-      g.fillStyle = cssVar(STATE_VAR[st] ?? '--inside'); g.beginPath(); g.arc(px, pz, 2.6, 0, 7); g.fill()
-    }
-  }, [building, view, run, i, blocked, mode3d])
+    const newBlocked = [...blocked, exitId]
+    setBlocked(newBlocked)
 
-  const counts: Record<string, number> = {}
-  for (const p of f?.people ?? []) counts[p[2]] = (counts[p[2]] ?? 0) + 1
-  const delta = run && baseline !== undefined && blocked.length ? run.total_time_s - baseline : undefined
+    if (DEMO) {
+      // demo: load pre-saved blocked frames
+      setApiLoading(true)
+      try {
+        const resp = await fetch('/frames_lab_block_blockedB.json')
+        const sim: SimResult = await resp.json()
+        setBlockedResult(sim)
+      } catch {
+        setError('Failed to load blocked frames')
+      } finally {
+        setApiLoading(false)
+      }
+      setFrameIdx(0)
+      setPlaying(false)
+      return
+    }
+
+    if (!building || !nearest) return
+    setApiLoading(true)
+    try {
+      const body = { building, plan: null, blocked: newBlocked }
+      const resp = await fetch(`${API_URL}/simulate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      if (!resp.ok) throw new Error(await resp.text())
+      const sim: SimResult = await resp.json()
+      setBlockedResult(sim)
+      setFrameIdx(0)
+      setPlaying(false)
+
+      // Try optimise
+      try {
+        const oResp = await fetch(`${API_URL}/optimise`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        })
+        if (oResp.ok) setOptimise(await oResp.json())
+      } catch { /* optimise optional */ }
+    } catch (e: unknown) {
+      setError(`API error: ${e instanceof Error ? e.message : e}`)
+    } finally {
+      setApiLoading(false)
+    }
+  }, [blocked, building, nearest])
+
+  const stateCounts = currentFrame
+    ? currentFrame.people.reduce<Record<string, number>>((acc, [,, st]) => {
+        acc[st] = (acc[st] ?? 0) + 1
+        return acc
+      }, {})
+    : {}
+
+  if (loading) return (
+    <div style={styles.center}>
+      <div style={styles.spinner} />
+      <div style={{ marginTop: 16, color: '#888' }}>Loading building data…</div>
+    </div>
+  )
+
+  if (error && !building) return (
+    <div style={styles.center}>
+      <div style={{ color: '#FF6666' }}>{error}</div>
+    </div>
+  )
+
+  if (!building || !nearest) return null
+
+  const displaySim = activeSim
+  const t = currentFrame?.t ?? 0
+  const pct = Math.round((frameIdx / (totalFrames - 1)) * 100)
 
   return (
-    <main style={{ maxWidth: 1280, margin: '0 auto', padding: '24px 16px' }}>
-      <header style={{ display: 'flex', alignItems: 'baseline', gap: 16, flexWrap: 'wrap' }}>
-        <h1 style={{ fontFamily: 'var(--serif)', fontSize: 44, margin: 0 }}>Nikaas</h1>
-        <span style={{ color: 'var(--muted)' }}>Photograph the exit map. Get everyone out faster.</span>
-      </header>
-      <p style={{ color: 'var(--muted)', margin: '6px 0 16px' }}>{building?.name}</p>
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 12 }}>
-        <span style={{ color: 'var(--muted)' }}>Building:</span>
-        {SOURCES.map(src => <button key={src.id} className={src.id === source.id ? 'on' : ''} onClick={() => setSource(src)}>{src.label}</button>)}
-      </div>
-      {source.id === 'vision' && building && (
-        <div style={{ background: '#fff8e6', border: '1px solid #e8c56a', padding: '8px 12px', marginBottom: 12, fontSize: 14 }}>
-          Read from the photo in one model call: {building.nodes.filter(n => n.type === 'room').length} rooms and{' '}
-          {exits.length} exit{exits.length === 1 ? '' : 's'} found. Missing exits make everyone queue at one door, so exits need a
-          human check before the times are trusted (hand-digitised: 3 exits). Details: <code>runs/vision_check.md</code>.
-        </div>
-      )}
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 12 }}>
-        <span style={{ color: 'var(--muted)' }}>Block an exit (tap it on the map):</span>
-        {exits.map(n => <button key={n.id} className={blocked.includes(n.id) ? 'on' : ''} onClick={() => toggleExit(n.id)}>{n.label ?? n.id}</button>)}
-        {blocked.length > 0 && <button onClick={() => setBlocked([])}>Reset</button>}
-        <span style={{ flex: 1 }} />
-        <button className={mode3d ? 'on' : ''} onClick={() => setMode3d(true)}>3D</button>
-        <button className={mode3d ? '' : 'on'} onClick={() => setMode3d(false)}>2D</button>
-        <button onClick={() => setPlaying(p => !p)}>{playing ? 'Pause' : 'Play'}</button>
-        {[1, 2, 4, 8].map(v => <button key={v} className={v === speed ? 'on' : ''} onClick={() => setSpeed(v)}>{v}×</button>)}
-        <button onClick={() => setI(0)}>Restart</button>
-      </div>
-      {DEMO && caption && <div style={{ background: '#111417', color: '#fff', padding: '12px 16px', marginBottom: 12, fontSize: 20 }}>{caption}</div>}
-      {error && <div role="alert" style={{ background: '#fdecec', border: '1px solid var(--queue)', padding: '8px 12px', marginBottom: 12 }}>{error}</div>}
-      <div className="layout">
-        <div style={{ position: 'relative' }}>
-          {mode3d && building
-            ? <View3D building={building} frame={f} blocked={blocked} routes={run?.door_routes} onExit={toggleExit} />
-            : <canvas ref={canvas} width={1000} height={560} onClick={onCanvasClick}
-                style={{ width: '100%', background: 'var(--card)', border: '1px solid var(--line)', cursor: 'pointer' }} />}
-          {!run && !error && <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', color: 'var(--muted)' }}>Simulating {building?.nodes.reduce((n, x) => n + ((x as { people?: number }).people ?? 0), 0) ?? ''} people…</div>}
-        </div>
-        <aside style={{ background: 'var(--card)', border: '1px solid var(--line)', padding: 16 }}>
-          <div style={{ fontFamily: 'var(--serif)', fontSize: 56, lineHeight: 1 }}>{fmt(f?.t ?? 0)}</div>
-          <div style={{ color: 'var(--muted)', fontSize: 13, marginBottom: 12 }}>simulated time</div>
-          {LEGEND.map(([k, label, v]) => (
-            <div key={k} style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'var(--mono)', fontSize: 14, padding: '3px 0' }}>
-              <span style={{ fontFamily: 'var(--sans)' }}><b style={{ display: 'inline-block', width: 10, height: 10, background: `var(${v})`, marginRight: 8 }} />{label}</span>
-              <span>{counts[k] ?? 0}</span>
-            </div>
+    <div style={styles.root}>
+      {/* Header */}
+      <div style={styles.header}>
+        <span style={styles.logo}>Nikaas</span>
+        <span style={styles.subtitle}>Evacuation Simulator</span>
+        {DEMO && <span style={styles.demoBadge}>DEMO</span>}
+        <div style={{ flex: 1 }} />
+        {/* View toggle */}
+        <div style={styles.btnGroup}>
+          {(['2d','3d','side'] as View[]).map(v => (
+            <button key={v} style={view === v ? styles.btnActive : styles.btn}
+              onClick={() => setView(v)}>
+              {v === 'side' ? '2D+3D' : v.toUpperCase()}
+            </button>
           ))}
-          <hr style={{ border: 0, borderTop: '1px solid var(--line)' }} />
-          <Stat label="Total evacuation" value={run ? `${run.total_time_s} s${delta !== undefined ? `  (${delta >= 0 ? '+' : ''}${delta.toFixed(1)} s vs all exits open)` : ''}` : '…'} />
-          <Stat label="Bottleneck (peak queue)" value={run ? `${run.bottleneck} (${run.peak_queue})` : '…'} />
-          <Stat label="People per exit" value={run ? Object.entries(run.per_exit).map(([k, v]) => `${k} ${v}`).join(' · ') : '…'} />
-          <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 12 }}>
-            {API && !DEMO ? 'Live: simulated on AWS for every change.' : 'Saved runs (demo mode).'} Simulator validated against the SFPE handbook example.
-          </div>
-        </aside>
+        </div>
       </div>
-    </main>
+
+      <div style={styles.main}>
+        {/* Canvas area */}
+        <div style={styles.canvasArea}>
+          {view === '2d' && (
+            <div style={styles.canvasWrap}>
+              <Canvas2D building={building} sim={displaySim} frame={currentFrame}
+                blocked={blocked} onClickExit={handleClickExit}
+                label={blocked.length ? 'Blocked exit plan' : 'Nearest-exit plan'} />
+            </div>
+          )}
+          {view === '3d' && (
+            <div style={styles.canvasWrap}>
+              <View3D building={building} sim={displaySim} frame={currentFrame} blocked={blocked} />
+              <div style={styles.hint3d}>Drag to orbit · Scroll to zoom</div>
+            </div>
+          )}
+          {view === 'side' && (
+            <div style={styles.sideWrap}>
+              <div style={styles.half}>
+                <Canvas2D building={building} sim={nearest} frame={nearest.frames[frameIdx] ?? null}
+                  blocked={[]} onClickExit={() => {}} label="Nearest-exit plan" />
+              </div>
+              <div style={styles.half}>
+                {(blockedResult || optimise) ? (
+                  <Canvas2D building={building}
+                    sim={optimise ?? blockedResult}
+                    frame={(optimise ?? blockedResult)!.frames[frameIdx] ?? null}
+                    blocked={blocked} onClickExit={handleClickExit}
+                    label={optimise ? 'Nikaas optimised' : 'Blocked exit plan'} />
+                ) : (
+                  <div style={styles.placeholder}>
+                    {blocked.length ? 'Loading…' : 'Click an exit to block it and see the re-plan'}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Right panel */}
+        <div style={styles.panel}>
+          {/* Clock */}
+          <div style={styles.clock}>
+            <span style={styles.clockTime}>T = {t.toFixed(1)} s</span>
+            <span style={styles.clockTotal}>/ {displaySim?.total_time_s.toFixed(0)} s</span>
+          </div>
+
+          {/* Controls */}
+          <div style={styles.controls}>
+            <button style={styles.playBtn} onClick={togglePlay}>
+              {playing ? '⏸' : '▶'}
+            </button>
+            <div style={styles.speedBtns}>
+              {([1,2,4] as Speed[]).map(s => (
+                <button key={s} style={speed === s ? styles.btnActive : styles.btn}
+                  onClick={() => setSpeed(s)}>{s}×</button>
+              ))}
+            </div>
+          </div>
+
+          {/* Scrubber */}
+          <input type="range" min={0} max={totalFrames - 1} value={frameIdx}
+            style={styles.scrubber}
+            onChange={e => { setFrameIdx(Number(e.target.value)); setPlaying(false) }} />
+          <div style={styles.scrubberLabel}>{pct}%</div>
+
+          {/* People dot grid */}
+          <div style={styles.section}>
+            <div style={styles.sectionTitle}>People grid</div>
+            <DotGrid total={displaySim?.people ?? 528} counts={stateCounts} />
+          </div>
+
+          {/* Legend */}
+          <div style={styles.section}>
+            <div style={styles.sectionTitle}>Legend</div>
+            {Object.entries(STATE_COLORS).map(([st, col]) => (
+              <div key={st} style={styles.legendRow}>
+                <span style={{ ...styles.dot, background: col }} />
+                <span style={styles.legendLabel}>{st}</span>
+                <span style={styles.legendCount}>{stateCounts[st] ?? 0}</span>
+              </div>
+            ))}
+            <div style={styles.legendRow}>
+              <span style={{ ...styles.dot, background: '#444' }} />
+              <span style={styles.legendLabel}>out (evacuated)</span>
+              <span style={styles.legendCount}>{stateCounts['out'] ?? 0}</span>
+            </div>
+          </div>
+
+          {/* Per-exit counts */}
+          {displaySim && (
+            <div style={styles.section}>
+              <div style={styles.sectionTitle}>Exits</div>
+              {Object.entries(displaySim.per_exit).map(([exit, cnt]) => (
+                <div key={exit} style={styles.exitRow}>
+                  <span style={{
+                    ...styles.exitBadge,
+                    background: blocked.includes(exit) ? '#FF3030' : '#00CC66'
+                  }}>{exit}</span>
+                  <span style={styles.exitCount}>{cnt} people</span>
+                  <button style={styles.blockBtn}
+                    onClick={() => handleClickExit(exit)}>
+                    {blocked.includes(exit) ? 'unblock' : 'block'}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Bottleneck */}
+          {displaySim?.bottleneck && (
+            <div style={styles.bottleneck}>
+              ⚠ Bottleneck: <b>{displaySim.bottleneck}</b>
+              <br />Peak queue: {displaySim.peak_queue}
+            </div>
+          )}
+
+          {/* Blocked exits */}
+          {blocked.length > 0 && (
+            <div style={styles.blockedInfo}>
+              Blocked: {blocked.join(', ')}
+              <button style={styles.clearBtn} onClick={() => { setBlocked([]); setBlockedResult(null); setOptimise(null) }}>
+                clear
+              </button>
+            </div>
+          )}
+
+          {apiLoading && <div style={styles.apiLoading}>Re-simulating…</div>}
+          {error && <div style={styles.errorBox}>{error}</div>}
+
+          {optimise && (
+            <div style={styles.optimiseBox}>
+              <b>Nikaas optimised</b>
+              <br />Total: {optimise.total_time_s.toFixed(1)} s
+              {(optimise as SimResult & { lower_bound_s?: number }).lower_bound_s !== undefined && (
+                <> · Lower bound: {(optimise as SimResult & { lower_bound_s?: number }).lower_bound_s!.toFixed(1)} s</>
+              )}
+            </div>
+          )}
+
+          <div style={styles.hint}>Click exits on the map to block/unblock them</div>
+        </div>
+      </div>
+    </div>
   )
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function DotGrid({ total, counts }: { total: number; counts: Record<string, number> }) {
+  const cols = Math.ceil(Math.sqrt(total))
+  const dots: string[] = []
+  const order: [string, string][] = [
+    ['walking', '#FF8C00'], ['queuing', '#FF3030'], ['stairs', '#4488FF'],
+    ['inside', '#888'], ['out', '#222'],
+  ]
+  for (const [st, col] of order) {
+    for (let i = 0; i < (counts[st] ?? 0); i++) dots.push(col)
+  }
+  while (dots.length < total) dots.push('#222')
+
   return (
-    <div style={{ marginTop: 8 }}>
-      <div style={{ fontSize: 13, color: 'var(--muted)' }}>{label}</div>
-      <div style={{ fontFamily: 'var(--mono)', fontSize: 15 }}>{value}</div>
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, maxWidth: 200 }}>
+      {dots.map((col, i) => (
+        <div key={i} style={{ width: 5, height: 5, borderRadius: '50%', background: col }} />
+      ))}
     </div>
   )
+}
+
+const styles: Record<string, React.CSSProperties> = {
+  root: { display: 'flex', flexDirection: 'column', height: '100vh', background: '#0d0d0d', color: '#e8e8e8' },
+  header: { display: 'flex', alignItems: 'center', gap: 12, padding: '8px 16px', borderBottom: '1px solid #222', flexShrink: 0 },
+  logo: { fontWeight: 800, fontSize: 18, color: '#00CC66', letterSpacing: -0.5 },
+  subtitle: { fontSize: 12, color: '#666' },
+  demoBadge: { background: '#FF8C00', color: '#000', fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 4 },
+  btnGroup: { display: 'flex', gap: 4 },
+  btn: { background: '#1a1a1a', border: '1px solid #333', color: '#aaa', borderRadius: 4, padding: '4px 10px', cursor: 'pointer', fontSize: 12 },
+  btnActive: { background: '#00CC66', border: '1px solid #00CC66', color: '#000', borderRadius: 4, padding: '4px 10px', cursor: 'pointer', fontSize: 12, fontWeight: 700 },
+  main: { display: 'flex', flex: 1, minHeight: 0 },
+  canvasArea: { flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' },
+  canvasWrap: { flex: 1, minHeight: 0, position: 'relative', background: '#0a0a0a' },
+  sideWrap: { flex: 1, minHeight: 0, display: 'flex' },
+  half: { flex: 1, minWidth: 0, position: 'relative', background: '#0a0a0a' },
+  placeholder: { display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#555', fontSize: 13, padding: 20, textAlign: 'center' },
+  hint3d: { position: 'absolute', bottom: 8, left: 8, color: '#444', fontSize: 10, pointerEvents: 'none' },
+  panel: { width: 220, borderLeft: '1px solid #1e1e1e', overflowY: 'auto', padding: 12, display: 'flex', flexDirection: 'column', gap: 12, flexShrink: 0, background: '#0f0f0f' },
+  clock: { display: 'flex', alignItems: 'baseline', gap: 6 },
+  clockTime: { fontSize: 22, fontWeight: 700, color: '#fff', fontVariantNumeric: 'tabular-nums' },
+  clockTotal: { fontSize: 12, color: '#555' },
+  controls: { display: 'flex', alignItems: 'center', gap: 8 },
+  playBtn: { background: '#00CC66', border: 'none', color: '#000', borderRadius: 6, padding: '6px 14px', cursor: 'pointer', fontSize: 16, fontWeight: 700 },
+  speedBtns: { display: 'flex', gap: 3 },
+  scrubber: { width: '100%', accentColor: '#00CC66', cursor: 'pointer' },
+  scrubberLabel: { fontSize: 10, color: '#555', textAlign: 'right' },
+  section: { display: 'flex', flexDirection: 'column', gap: 5 },
+  sectionTitle: { fontSize: 10, fontWeight: 700, color: '#555', textTransform: 'uppercase', letterSpacing: 1 },
+  legendRow: { display: 'flex', alignItems: 'center', gap: 6 },
+  dot: { width: 10, height: 10, borderRadius: '50%', flexShrink: 0 },
+  legendLabel: { flex: 1, fontSize: 12, color: '#aaa' },
+  legendCount: { fontSize: 12, color: '#666', fontVariantNumeric: 'tabular-nums' },
+  exitRow: { display: 'flex', alignItems: 'center', gap: 6 },
+  exitBadge: { padding: '2px 6px', borderRadius: 4, color: '#000', fontSize: 11, fontWeight: 700, flexShrink: 0 },
+  exitCount: { flex: 1, fontSize: 11, color: '#888' },
+  blockBtn: { background: 'none', border: '1px solid #333', color: '#888', borderRadius: 3, padding: '2px 6px', cursor: 'pointer', fontSize: 10 },
+  bottleneck: { background: '#1a0a0a', border: '1px solid #FF3030', borderRadius: 6, padding: '8px 10px', fontSize: 11, color: '#FF8888' },
+  blockedInfo: { background: '#1a1000', border: '1px solid #FF8C00', borderRadius: 6, padding: '8px 10px', fontSize: 11, color: '#FFB800', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
+  clearBtn: { background: 'none', border: '1px solid #FF8C00', color: '#FF8C00', borderRadius: 3, padding: '2px 6px', cursor: 'pointer', fontSize: 10 },
+  apiLoading: { color: '#888', fontSize: 11, fontStyle: 'italic' },
+  errorBox: { background: '#1a0a0a', border: '1px solid #FF3030', borderRadius: 4, padding: '6px 8px', fontSize: 11, color: '#FF8888' },
+  optimiseBox: { background: '#0a1a0a', border: '1px solid #00CC66', borderRadius: 6, padding: '8px 10px', fontSize: 11, color: '#88FF88' },
+  hint: { fontSize: 10, color: '#333', marginTop: 'auto', paddingTop: 8 },
+  center: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh' },
+  spinner: { width: 32, height: 32, border: '3px solid #1e1e1e', borderTop: '3px solid #00CC66', borderRadius: '50%', animation: 'spin 0.8s linear infinite' },
 }
