@@ -24,6 +24,8 @@ PENALTY_WEIGHTS = {
     "STAIR_MISSING_LENGTH": 20.0,
     "STAIR_INVALID_PHYSICAL_LENGTH": 20.0,
     "MALFORMED_FLOOR_METADATA": 25.0,
+    "DISCONNECTED_CAPACITY_GROUP": 25.0,
+    "NON_ADJACENT_FLOOR_STAIR": 20.0,
     "INCONSISTENT_CAPACITY_GROUP": 10.0,
     "INSUFFICIENT_EXIT_CAPACITY": 15.0,
     "INSUFFICIENT_EXIT_COUNT": 15.0,
@@ -703,6 +705,33 @@ def analyze_graph(building: dict[str, Any]) -> dict[str, Any]:
                             })
                             mf_status = "critical"
 
+# Sort floors by elevation to verify adjacent floor transitions
+            floor_elev_map = {}
+            for f in raw_floors:
+                if isinstance(f, dict) and "id" in f and isinstance(f.get("elevation_m"), (int, float)):
+                    floor_elev_map[f["id"]] = float(f["elevation_m"])
+            sorted_floors = sorted(floor_elev_map.keys(), key=lambda fid: floor_elev_map[fid])
+            floor_rank = {fid: idx for idx, fid in enumerate(sorted_floors)}
+
+            # Check for non-adjacent floor transitions
+            for e in raw_edges:
+                if e.get("kind") == "stair":
+                    u, v = e.get("from"), e.get("to")
+                    if u in nodes and v in nodes:
+                        fu = nodes[u].get("floor_id")
+                        fv = nodes[v].get("floor_id")
+                        if fu and fv and fu != fv and fu in floor_rank and fv in floor_rank:
+                            if abs(floor_rank[fu] - floor_rank[fv]) > 1:
+                                warnings.append({
+                                    "code": "NON_ADJACENT_FLOOR_STAIR",
+                                    "severity": "warning",
+                                    "message": f"Stair edge '{u}-{v}' connects non-adjacent floors '{fu}' and '{fv}' without an intermediate floor landing.",
+                                    "elements": [u, v],
+                                    "suggestion": f"Ensure stair edge connects consecutive vertical floors or provide intermediate landings."
+                                })
+                                if mf_status != "critical":
+                                    mf_status = "warning"
+
             # Check capacity groups
             cap_groups = {}
             for e in raw_edges:
@@ -721,6 +750,59 @@ def analyze_graph(building: dict[str, Any]) -> dict[str, Any]:
                     })
                     if mf_status != "critical":
                         mf_status = "warning"
+
+                # Check vertical shaft continuity across flights in this capacity group
+                if len(g_edges) > 1:
+                    cg_adj = {}
+                    for e in g_edges:
+                        u, v = str(e.get("from")), str(e.get("to"))
+                        cg_adj.setdefault(u, set()).add(v)
+                        cg_adj.setdefault(v, set()).add(u)
+                    visited = set()
+                    comps = 0
+                    for n in cg_adj:
+                        if n not in visited:
+                            comps += 1
+                            q = [n]
+                            visited.add(n)
+                            while q:
+                                curr = q.pop(0)
+                                for nb in cg_adj.get(curr, ()):
+                                    if nb not in visited:
+                                        visited.add(nb)
+                                        q.append(nb)
+                    if comps > 1:
+                        warnings.append({
+                            "code": "DISCONNECTED_CAPACITY_GROUP",
+                            "severity": "warning",
+                            "message": f"Capacity group '{cg}' contains disconnected stair flights that do not form a contiguous vertical shaft ({comps} disconnected components).",
+                            "elements": [f"{e.get('from')}-{e.get('to')}" for e in g_edges],
+                            "suggestion": f"Ensure all stair flights in capacity group '{cg}' connect continuously at floor landings."
+                        })
+                        if mf_status != "critical":
+                            mf_status = "warning"
+
+                    # Check contiguous vertical floor coverage in capacity group
+                    cg_floors = set()
+                    for e in g_edges:
+                        u, v = str(e.get("from")), str(e.get("to"))
+                        if u in nodes and "floor_id" in nodes[u]:
+                            cg_floors.add(nodes[u]["floor_id"])
+                        if v in nodes and "floor_id" in nodes[v]:
+                            cg_floors.add(nodes[v]["floor_id"])
+                    cg_ranks = [floor_rank[fid] for fid in cg_floors if fid in floor_rank]
+                    if cg_ranks and (max(cg_ranks) - min(cg_ranks) + 1 != len(set(cg_ranks))):
+                        missing_ranks = set(range(min(cg_ranks), max(cg_ranks) + 1)) - set(cg_ranks)
+                        missing_fids = [sorted_floors[r] for r in sorted(missing_ranks)]
+                        warnings.append({
+                            "code": "DISCONNECTED_CAPACITY_GROUP",
+                            "severity": "warning",
+                            "message": f"Capacity group '{cg}' has missing intermediate floors ({', '.join(missing_fids)}) in its vertical span.",
+                            "elements": [f"{e.get('from')}-{e.get('to')}" for e in g_edges],
+                            "suggestion": f"Include stair flights for intermediate floors {missing_fids} in capacity group '{cg}'."
+                        })
+                        if mf_status != "critical":
+                            mf_status = "warning"
 
     # Compute heuristic score
     total_penalty = 0.0

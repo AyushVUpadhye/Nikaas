@@ -130,9 +130,21 @@ def run_benchmarks():
         "runtime_s": dt,
     })
 
-    # Scenario 4: Narrow (1.2m) vs Wide (1.6m) Stairwell Flow
+    # Scenario 4: Narrow Stairwells (1.0m width vs standard 1.6m width)
+    narrow_d = copy.deepcopy(office_d)
+    for e in narrow_d["edges"]:
+        if e.get("kind") == "stair":
+            e["width"] = 1.0
+    b_narrow = load(narrow_d)
+    t0 = time.perf_counter()
+    n_plan_narrow = nearest_plan(b_narrow)
+    n_sim_narrow = simulate(b_narrow, n_plan_narrow, frame_every=1e9)
+    opt_narrow = optimise(b_narrow)
+    lb_narrow = lower_bound(b_narrow)
+    dt = round(time.perf_counter() - t0, 3)
+
     results.append({
-        "scenario": "3_floor_narrow_vs_wide_stairwell",
+        "scenario": "3_floor_narrow_stairwell_1m",
         "building_hash": sha256_of_file(office_path),
         "commit": commit,
         "floor_count": 3,
@@ -140,17 +152,17 @@ def run_benchmarks():
         "total_occupants": 400,
         "stairwell_count": 2,
         "blocked_resources": "none",
-        "plan_type": "comparison",
-        "plan": n_plan,
-        "completed": True,
-        "movement_time_s": n_sim["total_time_s"],
-        "nearest_time_s": n_sim["total_time_s"],
-        "lower_bound_s": lb,
-        "gap_to_bound_s": round(n_sim["total_time_s"] - lb, 2),
-        "per_floor_population": {f: v["occupants"] for f, v in n_sim["per_floor"].items()},
-        "per_exit_population": n_sim["per_exit"],
-        "stairwell_load": n_sim["stairwell_load"],
-        "runtime_s": 0.01,
+        "plan_type": "nikaas_plan",
+        "plan": opt_narrow["plan"],
+        "completed": opt_narrow["total_time_s"] is not None,
+        "movement_time_s": opt_narrow["total_time_s"],
+        "nearest_time_s": n_sim_narrow["total_time_s"],
+        "lower_bound_s": lb_narrow,
+        "gap_to_bound_s": round(opt_narrow["total_time_s"] - lb_narrow, 2) if opt_narrow["total_time_s"] else None,
+        "per_floor_population": {f: v["occupants"] for f, v in n_sim_narrow["per_floor"].items()},
+        "per_exit_population": n_sim_narrow["per_exit"],
+        "stairwell_load": n_sim_narrow["stairwell_load"],
+        "runtime_s": dt,
     })
 
     # Scenario 5: Uneven Occupant Distribution (Top Floor Doubled)

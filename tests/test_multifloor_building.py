@@ -128,3 +128,26 @@ def test_unreachable_floor_when_stairs_severed(base_multifloor_dict):
     d["edges"] = [e for e in d["edges"] if e.get("kind") != "stair"]
     probs = validate(d)
     assert any("room r_F2_1 cannot reach any exit" in p for p in probs)
+
+
+def test_corridor_with_capacity_group_rejected(base_multifloor_dict):
+    d = copy.deepcopy(base_multifloor_dict)
+    for e in d["edges"]:
+        if e.get("kind") == "corridor":
+            e["capacity_group"] = "invalid_group"
+            break
+    probs = validate(d)
+    assert any("only stair edges may belong to a capacity_group" in p for p in probs)
+
+
+def test_disconnected_capacity_group_rejected(base_multifloor_dict):
+    d = copy.deepcopy(base_multifloor_dict)
+    # Create two disconnected stair flights with the same capacity group
+    # One flight in north stair with shaft_discon, another flight in south stair with shaft_discon
+    for e in d["edges"]:
+        if e.get("from") == "stair_north_F2" and e.get("to") == "stair_north_F1":
+            e["capacity_group"] = "shaft_discon"
+        elif e.get("from") == "stair_south_F1" and e.get("to") == "stair_south_GF":
+            e["capacity_group"] = "shaft_discon"
+    probs = validate(d)
+    assert any("edges are disconnected" in p for p in probs)

@@ -100,3 +100,35 @@ def test_optimiser_beats_nearest_on_tower(tower_building):
     n_time = simulate(b, nearest_plan(b), frame_every=1e9)["total_time_s"]
     opt_res = optimise(b)
     assert opt_res["total_time_s"] < n_time
+
+
+def test_lp_lower_bound_strictly_bounds_multidoor_stairwell_split():
+    # Multi-door room where doors lead to different stairwells
+    d = {
+        "name": "Multi-door Stairwell Split Test",
+        "floors": [
+            {"id": "GF", "name": "GF", "elevation_m": 0.0},
+            {"id": "F1", "name": "F1", "elevation_m": 3.5}
+        ],
+        "nodes": [
+            {"id": "exit", "type": "exit", "floor_id": "GF", "x": 0.0, "z": 0.0},
+            {"id": "land_A_GF", "type": "corridor", "floor_id": "GF", "x": -5.0, "z": 0.0},
+            {"id": "land_B_GF", "type": "corridor", "floor_id": "GF", "x": 5.0, "z": 0.0},
+            {"id": "land_A_F1", "type": "corridor", "floor_id": "F1", "x": -5.0, "z": 0.0},
+            {"id": "land_B_F1", "type": "corridor", "floor_id": "F1", "x": 5.0, "z": 0.0},
+            {"id": "r1", "type": "room", "floor_id": "F1", "x": 0.0, "z": 0.0, "w": 6.0, "d": 4.0, "people": 100}
+        ],
+        "edges": [
+            {"from": "exit", "to": "land_A_GF", "width": 3.0, "length": 5.0, "kind": "corridor"},
+            {"from": "exit", "to": "land_B_GF", "width": 3.0, "length": 5.0, "kind": "corridor"},
+            {"from": "r1", "to": "land_A_F1", "width": 1.5, "length": 5.0, "kind": "door"},
+            {"from": "r1", "to": "land_B_F1", "width": 1.5, "length": 5.0, "kind": "door"},
+            {"from": "land_A_F1", "to": "land_A_GF", "width": 1.3, "length": 5.0, "kind": "stair", "capacity_group": "shaft_A"},
+            {"from": "land_B_F1", "to": "land_B_GF", "width": 1.3, "length": 5.0, "kind": "stair", "capacity_group": "shaft_B"}
+        ]
+    }
+    b = load(d)
+    lb = lower_bound(b)
+    plan = nearest_plan(b)
+    sim_time = simulate(b, plan, frame_every=1e9)["total_time_s"]
+    assert lb <= sim_time, f"LP lower bound {lb} exceeds actual simulation time {sim_time}"

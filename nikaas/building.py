@@ -118,6 +118,8 @@ def validate(d):
         if e.get("capacity_group") is not None:
             if not (isinstance(e["capacity_group"], str) and e["capacity_group"].strip()):
                 probs.append(f"edge {e.get('from')}-{e.get('to')}: capacity_group must be a non-empty string")
+            elif e.get("kind") != "stair":
+                probs.append(f"edge {e.get('from')}-{e.get('to')}: only stair edges may belong to a capacity_group")
 
         # Multi-floor edge rules
         if "floors" in d and d["floors"] and e.get("from") in nodes and e.get("to") in nodes:
@@ -128,6 +130,35 @@ def validate(d):
                     probs.append(f"cross-floor edge {e.get('from')}-{e.get('to')} between {f_from} and {f_to} must have kind 'stair'")
                 if e.get("length") is None:
                     probs.append(f"cross-floor stair edge {e.get('from')}-{e.get('to')} must specify explicit positive 'length'")
+
+    # Check capacity group continuity
+    cap_groups = {}
+    for e in d["edges"]:
+        cg = e.get("capacity_group")
+        if cg and isinstance(cg, str) and cg.strip():
+            cap_groups.setdefault(cg.strip(), []).append(e)
+
+    for cg, g_edges in cap_groups.items():
+        if len(g_edges) > 1:
+            cg_adj = {}
+            for e in g_edges:
+                u, v = e.get("from"), e.get("to")
+                if u in nodes and v in nodes:
+                    cg_adj.setdefault(u, set()).add(v)
+                    cg_adj.setdefault(v, set()).add(u)
+            visited = set()
+            start_n = next(iter(cg_adj), None)
+            if start_n:
+                q = [start_n]
+                visited.add(start_n)
+                while q:
+                    curr = q.pop(0)
+                    for nb in cg_adj.get(curr, ()):
+                        if nb not in visited:
+                            visited.add(nb)
+                            q.append(nb)
+                if len(visited) < len(cg_adj):
+                    probs.append(f"capacity group '{cg}': edges are disconnected and do not form a contiguous shaft")
 
     if not any(n.get("type") == "exit" for n in d["nodes"]):
         probs.append("building has no exit")

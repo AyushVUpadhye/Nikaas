@@ -114,3 +114,31 @@ def test_legacy_single_floor_qa_remains_stable():
     assert report["score"] == 100.0
     assert report["checks"]["multi_floor"]["status"] == "pass"
     assert report["checks"]["multi_floor"]["floors_count"] == 1
+
+
+def test_disconnected_capacity_group_flagged(clean_multifloor):
+    d = copy.deepcopy(clean_multifloor)
+    # Assign same capacity group to two disconnected flights
+    for e in d["edges"]:
+        if e.get("from") == "stair_north_F2" and e.get("to") == "stair_north_F1":
+            e["capacity_group"] = "shaft_split"
+        elif e.get("from") == "stair_south_F1" and e.get("to") == "stair_south_GF":
+            e["capacity_group"] = "shaft_split"
+    report = analyze_graph(d)
+    w_codes = [w["code"] for w in report["warnings"]]
+    assert "DISCONNECTED_CAPACITY_GROUP" in w_codes
+
+
+def test_non_adjacent_floor_stair_flagged(clean_multifloor):
+    d = copy.deepcopy(clean_multifloor)
+    # Add direct stair flight from F2 to GF skipping F1
+    d["edges"].append({
+        "from": "stair_north_F2",
+        "to": "stair_north_GF",
+        "width": 1.5,
+        "length": 15.0,
+        "kind": "stair"
+    })
+    report = analyze_graph(d)
+    w_codes = [w["code"] for w in report["warnings"]]
+    assert "NON_ADJACENT_FLOOR_STAIR" in w_codes

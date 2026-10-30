@@ -160,3 +160,94 @@ def test_legacy_single_floor_frames_do_not_contain_people_3d():
     res = simulate(b, nearest_plan(b), frame_every=1.0)
     assert "people" in res["frames"][0]
     assert "people_3d" not in res["frames"][0]
+
+
+def test_sustained_arrival_fair_concurrency_no_starvation():
+    # 3-floor building with sustained competition on a single stairwell
+    d = {
+        "name": "3-Floor Fair Competition",
+        "floors": [
+            {"id": "GF", "name": "GF", "elevation_m": 0.0},
+            {"id": "F1", "name": "F1", "elevation_m": 3.5},
+            {"id": "F2", "name": "F2", "elevation_m": 7.0},
+            {"id": "F3", "name": "F3", "elevation_m": 10.5}
+        ],
+        "nodes": [
+            {"id": "exit", "type": "exit", "floor_id": "GF", "x": 0.0, "z": 0.0},
+            {"id": "land_GF", "type": "corridor", "floor_id": "GF", "x": 0.0, "z": 2.0},
+            {"id": "land_F1", "type": "corridor", "floor_id": "F1", "x": 0.0, "z": 2.0},
+            {"id": "land_F2", "type": "corridor", "floor_id": "F2", "x": 0.0, "z": 2.0},
+            {"id": "land_F3", "type": "corridor", "floor_id": "F3", "x": 0.0, "z": 2.0},
+            {"id": "r_F1", "type": "room", "floor_id": "F1", "x": 5.0, "z": 2.0, "w": 4.0, "d": 4.0, "people": 60},
+            {"id": "r_F2", "type": "room", "floor_id": "F2", "x": 5.0, "z": 2.0, "w": 4.0, "d": 4.0, "people": 60},
+            {"id": "r_F3", "type": "room", "floor_id": "F3", "x": 5.0, "z": 2.0, "w": 4.0, "d": 4.0, "people": 60}
+        ],
+        "edges": [
+            {"from": "exit", "to": "land_GF", "width": 3.0, "length": 2.0, "kind": "corridor"},
+            {"from": "r_F1", "to": "land_F1", "width": 2.0, "length": 2.0, "kind": "door"},
+            {"from": "r_F2", "to": "land_F2", "width": 2.0, "length": 2.0, "kind": "door"},
+            {"from": "r_F3", "to": "land_F3", "width": 2.0, "length": 2.0, "kind": "door"},
+            {"from": "land_F3", "to": "land_F2", "width": 1.3, "length": 5.0, "kind": "stair", "capacity_group": "shaft_1"},
+            {"from": "land_F2", "to": "land_F1", "width": 1.3, "length": 5.0, "kind": "stair", "capacity_group": "shaft_1"},
+            {"from": "land_F1", "to": "land_GF", "width": 1.3, "length": 5.0, "kind": "stair", "capacity_group": "shaft_1"}
+        ]
+    }
+    b = load(d)
+    plan = {"r_F1": "exit", "r_F2": "exit", "r_F3": "exit"}
+    res = simulate(b, plan, frame_every=1.0)
+    assert res["completed"] is True
+
+    # At midpoint (t = 100s), check that all 3 floors have occupants successfully evacuated (no floor starved)
+    mid_frame = next(f for f in res["frames"] if f["t"] >= 100.0)
+    p3d = mid_frame["people_3d"]
+    # First 60 people are r_F1, next 60 r_F2, next 60 r_F3
+    f1_out = sum(1 for p in p3d[:60] if p[3] == "out")
+    f2_out = sum(1 for p in p3d[60:120] if p[3] == "out")
+    f3_out = sum(1 for p in p3d[120:] if p[3] == "out")
+
+    assert f1_out > 10, f"Floor 1 starved: only {f1_out} out"
+    assert f2_out > 10, f"Floor 2 starved: only {f2_out} out"
+    assert f3_out > 10, f"Floor 3 starved: only {f3_out} out"
+
+
+def test_width_bottleneck_in_middle_flight_governs_shaft_throughput():
+    # Middle flight F2->F1 has width 0.9m (effective width 0.6m -> cap ~0.607 pps)
+    # Flights F3->F2 and F1->GF have width 1.6m (effective width 1.3m -> cap ~1.315 pps)
+    d = {
+        "name": "Middle Choke Shaft",
+        "floors": [
+            {"id": "GF", "name": "GF", "elevation_m": 0.0},
+            {"id": "F1", "name": "F1", "elevation_m": 3.5},
+            {"id": "F2", "name": "F2", "elevation_m": 7.0},
+            {"id": "F3", "name": "F3", "elevation_m": 10.5}
+        ],
+        "nodes": [
+            {"id": "exit", "type": "exit", "floor_id": "GF", "x": 0.0, "z": 0.0},
+            {"id": "land_GF", "type": "corridor", "floor_id": "GF", "x": 0.0, "z": 2.0},
+            {"id": "land_F1", "type": "corridor", "floor_id": "F1", "x": 0.0, "z": 2.0},
+            {"id": "land_F2", "type": "corridor", "floor_id": "F2", "x": 0.0, "z": 2.0},
+            {"id": "land_F3", "type": "corridor", "floor_id": "F3", "x": 0.0, "z": 2.0},
+            {"id": "r_F3", "type": "room", "floor_id": "F3", "x": 5.0, "z": 2.0, "w": 4.0, "d": 4.0, "people": 100}
+        ],
+        "edges": [
+            {"from": "exit", "to": "land_GF", "width": 3.0, "length": 2.0, "kind": "corridor"},
+            {"from": "r_F3", "to": "land_F3", "width": 2.0, "length": 2.0, "kind": "door"},
+            {"from": "land_F3", "to": "land_F2", "width": 1.6, "length": 5.0, "kind": "stair", "capacity_group": "shaft_choke"},
+            {"from": "land_F2", "to": "land_F1", "width": 0.9, "length": 5.0, "kind": "stair", "capacity_group": "shaft_choke"},
+            {"from": "land_F1", "to": "land_GF", "width": 1.6, "length": 5.0, "kind": "stair", "capacity_group": "shaft_choke"}
+        ]
+    }
+    b = load(d)
+    res = simulate(b, {"r_F3": "exit"}, frame_every=1e9)
+    # Governed by 0.9m bottleneck: effective width = 0.6m -> group_cap = 0.6 * 1.012 = 0.6072 pps
+    # 100 people / 0.6072 ≈ 164.7s + walk time
+    assert res["total_time_s"] >= 160.0
+
+
+def test_exit_attribution_consistency(office_building):
+    b = office_building
+    plan = nearest_plan(b)
+    res = simulate(b, plan, frame_every=1e9)
+    total_occupants = sum(b.people().values())
+    assert sum(res["per_exit"].values()) == total_occupants
+    assert sum(f["occupants"] for f in res["per_floor"].values()) == total_occupants

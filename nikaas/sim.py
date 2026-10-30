@@ -166,6 +166,10 @@ def simulate(b: Building, plan: dict, blocked=(), seed=7, max_t=1800.0, frame_ev
     grouped_keys = set(edge_to_group.keys())
     ungrouped_keys = [e.key for e in b.edges if not e.capacity_group]
 
+    # Persistent round-robin pointers and landing zipper-merge toggles for fair sharing
+    group_rr_ptr = {g: 0 for g in capacity_groups}
+    landing_toggle = {e.key: True for e in b.edges}
+
     while t <= max_t:
         # 1) people whose pre-movement ended join the queue of their first edge
         for p in people:
@@ -185,51 +189,80 @@ def simulate(b: Building, plan: dict, blocked=(), seed=7, max_t=1800.0, frame_ev
                 credit[k] = min(credit[k], 1.0)
             peak_q[k] = max(peak_q[k], len(q))
 
-        # 2b) Grouped edges: shared capacity resource for the stairwell
+        # 2b) Grouped edges: shared capacity resource with fair round-robin scheduling and landing zipper-merge
         for g, g_edges in capacity_groups.items():
             g_keys = [e.key for e in g_edges]
             group_credit[g] += group_cap[g] * DT
 
-            # Priority 1: Internal continuous descending flow
-            # People already in the stairwell moving from one stair flight to the next within the same
-            # capacity group are given internal priority to prevent mid-landing gridlock.
-            for k in g_keys:
-                q = queues[k]
-                idx = 0
-                while idx < len(q):
-                    p = people[q[idx]]
-                    prev_edge = edge_of.get((p.path[p.leg - 1], p.path[p.leg])) if p.leg > 0 else None
-                    if prev_edge and prev_edge.capacity_group == g:
-                        # Internal continuation
-                        q.pop(idx)
-                        e = edge_of[(p.path[p.leg], p.path[p.leg + 1])]
-                        p.state, p.s = "stairs", 0.0
-                    else:
-                        idx += 1
+            # Accumulate per-edge credit for each flight in the group
+            for e in g_edges:
+                credit[e.key] += cap[e.key] * DT
 
-            # Priority 2: External new entrants from floor doors into the stairwell
-            # Entrants consume from group_credit[g], ensuring the total admission across all floors
-            # does not exceed the physical stairwell's discharge capacity.
-            while group_credit[g] >= 1.0:
-                # Find the queue with waiting external entrant (round-robin / FIFO order)
-                admitted = False
+            progress = True
+            while progress:
+                progress = False
+
+                # 1. Internal descending continuity: advance internal evacuees with zipper merge at landings
                 for k in g_keys:
-                    q = queues[k]
-                    if q:
-                        group_credit[g] -= 1.0
-                        p = people[q.pop(0)]
+                    if credit[k] < 1.0 or not queues[k]:
+                        continue
+                    internal_indices = [idx for idx, pid in enumerate(queues[k])
+                                        if (people[pid].leg > 0 and
+                                            edge_of.get((people[pid].path[people[pid].leg - 1], people[pid].path[people[pid].leg])) and
+                                            edge_of[(people[pid].path[people[pid].leg - 1], people[pid].path[people[pid].leg])].capacity_group == g)]
+                    external_indices = [idx for idx, pid in enumerate(queues[k])
+                                        if idx not in internal_indices]
+
+                    serve_internal = False
+                    if internal_indices and not external_indices:
+                        serve_internal = True
+                    elif internal_indices and external_indices:
+                        # 1:1 alternating zipper merge at landing
+                        if landing_toggle[k] or group_credit[g] < 1.0:
+                            serve_internal = True
+                        else:
+                            serve_internal = False
+
+                    if serve_internal and internal_indices:
+                        idx = internal_indices[0]
+                        credit[k] -= 1.0
+                        p = people[queues[k].pop(idx)]
                         e = edge_of[(p.path[p.leg], p.path[p.leg + 1])]
                         p.state, p.s = "stairs", 0.0
-                        admitted = True
+                        landing_toggle[k] = not landing_toggle[k]
+                        progress = True
                         break
-                if not admitted:
-                    break
+
+                # 2. Fair round-robin admission of external entrants into the stairwell across floors
+                if not progress and group_credit[g] >= 1.0:
+                    n_edges = len(g_keys)
+                    start_ptr = group_rr_ptr[g]
+                    for offset in range(n_edges):
+                        cand_idx = (start_ptr + offset) % n_edges
+                        cand_k = g_keys[cand_idx]
+                        if credit[cand_k] < 1.0 or not queues[cand_k]:
+                            continue
+                        ext_idx = next((idx for idx, pid in enumerate(queues[cand_k])
+                                        if (people[pid].leg == 0 or
+                                            not edge_of.get((people[pid].path[people[pid].leg - 1], people[pid].path[people[pid].leg])) or
+                                            edge_of[(people[pid].path[people[pid].leg - 1], people[pid].path[people[pid].leg])].capacity_group != g)), None)
+                        if ext_idx is not None:
+                            group_credit[g] -= 1.0
+                            credit[cand_k] -= 1.0
+                            p = people[queues[cand_k].pop(ext_idx)]
+                            e = edge_of[(p.path[p.leg], p.path[p.leg + 1])]
+                            p.state, p.s = "stairs", 0.0
+                            landing_toggle[cand_k] = not landing_toggle[cand_k]
+                            group_rr_ptr[g] = (cand_idx + 1) % n_edges
+                            progress = True
+                            break
 
             # If all queues in group are empty, clamp leftover capacity
             if not any(queues[k] for k in g_keys):
                 group_credit[g] = min(group_credit[g], 1.0)
-
             for k in g_keys:
+                if not queues[k]:
+                    credit[k] = min(credit[k], 1.0)
                 peak_q[k] = max(peak_q[k], len(queues[k]))
 
         # 3) walkers advance; at the end of an edge they reach a node

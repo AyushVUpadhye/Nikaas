@@ -1,8 +1,8 @@
 [
   {
     "scenario": "3_floor_office_normal",
-    "building_hash": "df5ba00d411e",
-    "commit": "6c173f8",
+    "building_hash": "c09382f73ee3",
+    "commit": "dc3aa5c",
     "floor_count": 3,
     "room_count": 10,
     "total_occupants": 400,
@@ -22,10 +22,10 @@
       "r_F2_4": "exit_south"
     },
     "completed": true,
-    "movement_time_s": 203.25,
-    "nearest_time_s": 203.25,
+    "movement_time_s": 210.5,
+    "nearest_time_s": 210.5,
     "lower_bound_s": 192.02,
-    "gap_to_bound_s": 11.23,
+    "gap_to_bound_s": 18.48,
     "per_floor_population": {
       "GF": 60,
       "F1": 160,
@@ -37,30 +37,30 @@
     },
     "stairwell_load": {
       "stairwell_north": {
-        "peak_queue": 80,
+        "peak_queue": 65,
         "capacity_pps": 1.32,
-        "bottleneck_edge": "stair_north_F1-stair_north_GF",
+        "bottleneck_edge": "stair_north_F2-stair_north_F1",
         "edges": [
           "stair_north_F2-stair_north_F1",
           "stair_north_F1-stair_north_GF"
         ]
       },
       "stairwell_south": {
-        "peak_queue": 80,
+        "peak_queue": 72,
         "capacity_pps": 0.91,
-        "bottleneck_edge": "stair_south_F1-stair_south_GF",
+        "bottleneck_edge": "stair_south_F2-stair_south_F1",
         "edges": [
           "stair_south_F2-stair_south_F1",
           "stair_south_F1-stair_south_GF"
         ]
       }
     },
-    "runtime_s": 1.324
+    "runtime_s": 2.762
   },
   {
     "scenario": "3_floor_office_north_exit_blocked",
-    "building_hash": "df5ba00d411e",
-    "commit": "6c173f8",
+    "building_hash": "c09382f73ee3",
+    "commit": "dc3aa5c",
     "floor_count": 3,
     "room_count": 10,
     "total_occupants": 400,
@@ -80,10 +80,10 @@
       "r_F2_4": "exit_south"
     },
     "completed": true,
-    "movement_time_s": 210.25,
-    "nearest_time_s": 210.25,
+    "movement_time_s": 210.5,
+    "nearest_time_s": 210.5,
     "lower_bound_s": 207.11,
-    "gap_to_bound_s": 3.14,
+    "gap_to_bound_s": 3.39,
     "per_floor_population": {
       "GF": 60,
       "F1": 160,
@@ -95,30 +95,30 @@
     },
     "stairwell_load": {
       "stairwell_north": {
-        "peak_queue": 80,
+        "peak_queue": 65,
         "capacity_pps": 1.32,
-        "bottleneck_edge": "stair_north_F1-stair_north_GF",
+        "bottleneck_edge": "stair_north_F2-stair_north_F1",
         "edges": [
           "stair_north_F2-stair_north_F1",
           "stair_north_F1-stair_north_GF"
         ]
       },
       "stairwell_south": {
-        "peak_queue": 80,
+        "peak_queue": 72,
         "capacity_pps": 0.91,
-        "bottleneck_edge": "stair_south_F1-stair_south_GF",
+        "bottleneck_edge": "stair_south_F2-stair_south_F1",
         "edges": [
           "stair_south_F2-stair_south_F1",
           "stair_south_F1-stair_south_GF"
         ]
       }
     },
-    "runtime_s": 0.044
+    "runtime_s": 0.067
   },
   {
     "scenario": "3_floor_office_south_exit_blocked",
-    "building_hash": "df5ba00d411e",
-    "commit": "6c173f8",
+    "building_hash": "c09382f73ee3",
+    "commit": "dc3aa5c",
     "floor_count": 3,
     "room_count": 10,
     "total_occupants": 400,
@@ -138,10 +138,10 @@
       "r_F2_4": "exit_north"
     },
     "completed": true,
-    "movement_time_s": 220.25,
-    "nearest_time_s": 220.25,
+    "movement_time_s": 227.5,
+    "nearest_time_s": 227.5,
     "lower_bound_s": 207.11,
-    "gap_to_bound_s": 13.14,
+    "gap_to_bound_s": 20.39,
     "per_floor_population": {
       "GF": 60,
       "F1": 160,
@@ -153,36 +153,36 @@
     },
     "stairwell_load": {
       "stairwell_north": {
-        "peak_queue": 80,
+        "peak_queue": 65,
         "capacity_pps": 1.32,
-        "bottleneck_edge": "stair_north_F1-stair_north_GF",
+        "bottleneck_edge": "stair_north_F2-stair_north_F1",
         "edges": [
           "stair_north_F2-stair_north_F1",
           "stair_north_F1-stair_north_GF"
         ]
       },
       "stairwell_south": {
-        "peak_queue": 80,
+        "peak_queue": 72,
         "capacity_pps": 0.91,
-        "bottleneck_edge": "stair_south_F1-stair_south_GF",
+        "bottleneck_edge": "stair_south_F2-stair_south_F1",
         "edges": [
           "stair_south_F2-stair_south_F1",
           "stair_south_F1-stair_south_GF"
         ]
       }
     },
-    "runtime_s": 0.044
+    "runtime_s": 0.069
   },
   {
-    "scenario": "3_floor_narrow_vs_wide_stairwell",
-    "building_hash": "df5ba00d411e",
-    "commit": "6c173f8",
+    "scenario": "3_floor_narrow_stairwell_1m",
+    "building_hash": "c09382f73ee3",
+    "commit": "dc3aa5c",
     "floor_count": 3,
     "room_count": 10,
     "total_occupants": 400,
     "stairwell_count": 2,
     "blocked_resources": "none",
-    "plan_type": "comparison",
+    "plan_type": "nikaas_plan",
     "plan": {
       "r_GF_1": "exit_north",
       "r_GF_2": "exit_north",
@@ -196,10 +196,10 @@
       "r_F2_4": "exit_south"
     },
     "completed": true,
-    "movement_time_s": 203.25,
-    "nearest_time_s": 203.25,
-    "lower_bound_s": 192.02,
-    "gap_to_bound_s": 11.23,
+    "movement_time_s": 263.5,
+    "nearest_time_s": 263.5,
+    "lower_bound_s": 245.37,
+    "gap_to_bound_s": 18.13,
     "per_floor_population": {
       "GF": 60,
       "F1": 160,
@@ -211,30 +211,30 @@
     },
     "stairwell_load": {
       "stairwell_north": {
-        "peak_queue": 80,
-        "capacity_pps": 1.32,
-        "bottleneck_edge": "stair_north_F1-stair_north_GF",
+        "peak_queue": 76,
+        "capacity_pps": 0.71,
+        "bottleneck_edge": "stair_north_F2-stair_north_F1",
         "edges": [
           "stair_north_F2-stair_north_F1",
           "stair_north_F1-stair_north_GF"
         ]
       },
       "stairwell_south": {
-        "peak_queue": 80,
-        "capacity_pps": 0.91,
-        "bottleneck_edge": "stair_south_F1-stair_south_GF",
+        "peak_queue": 76,
+        "capacity_pps": 0.71,
+        "bottleneck_edge": "stair_south_F2-stair_south_F1",
         "edges": [
           "stair_south_F2-stair_south_F1",
           "stair_south_F1-stair_south_GF"
         ]
       }
     },
-    "runtime_s": 0.01
+    "runtime_s": 3.454
   },
   {
     "scenario": "3_floor_office_uneven_top_heavy",
-    "building_hash": "df5ba00d411e",
-    "commit": "6c173f8",
+    "building_hash": "c09382f73ee3",
+    "commit": "dc3aa5c",
     "floor_count": 3,
     "room_count": 10,
     "total_occupants": 580,
@@ -254,10 +254,10 @@
       "r_F2_4": "exit_south"
     },
     "completed": true,
-    "movement_time_s": 302.0,
-    "nearest_time_s": 302.0,
+    "movement_time_s": 309.25,
+    "nearest_time_s": 309.25,
     "lower_bound_s": 290.88,
-    "gap_to_bound_s": 11.12,
+    "gap_to_bound_s": 18.37,
     "per_floor_population": {
       "GF": 60,
       "F1": 160,
@@ -269,7 +269,7 @@
     },
     "stairwell_load": {
       "stairwell_north": {
-        "peak_queue": 80,
+        "peak_queue": 130,
         "capacity_pps": 1.32,
         "bottleneck_edge": "stair_north_F2-stair_north_F1",
         "edges": [
@@ -278,7 +278,7 @@
         ]
       },
       "stairwell_south": {
-        "peak_queue": 110,
+        "peak_queue": 145,
         "capacity_pps": 0.91,
         "bottleneck_edge": "stair_south_F2-stair_south_F1",
         "edges": [
@@ -287,12 +287,12 @@
         ]
       }
     },
-    "runtime_s": 0.607
+    "runtime_s": 1.091
   },
   {
     "scenario": "5_floor_tower_scaling",
-    "building_hash": "6623f913c85b",
-    "commit": "6c173f8",
+    "building_hash": "c34ee4afe8a8",
+    "commit": "dc3aa5c",
     "floor_count": 5,
     "room_count": 9,
     "total_occupants": 450,
@@ -301,20 +301,20 @@
     "plan_type": "nikaas_plan",
     "plan": {
       "r_GF_1": "exit_north",
-      "r_F1_1": "exit_south",
+      "r_F1_1": "exit_north",
       "r_F1_2": "exit_north",
       "r_F2_1": "exit_south",
       "r_F2_2": "exit_south",
       "r_F3_1": "exit_south",
       "r_F3_2": "exit_north",
-      "r_F4_1": "exit_north",
+      "r_F4_1": "exit_south",
       "r_F4_2": "exit_north"
     },
     "completed": true,
-    "movement_time_s": 191.25,
-    "nearest_time_s": 356.0,
+    "movement_time_s": 206.0,
+    "nearest_time_s": 375.25,
     "lower_bound_s": 179.73,
-    "gap_to_bound_s": 11.52,
+    "gap_to_bound_s": 26.27,
     "per_floor_population": {
       "GF": 50,
       "F1": 100,
@@ -328,9 +328,9 @@
     },
     "stairwell_load": {
       "tower_north": {
-        "peak_queue": 100,
+        "peak_queue": 86,
         "capacity_pps": 1.21,
-        "bottleneck_edge": "stair_north_F3-stair_north_F2",
+        "bottleneck_edge": "stair_north_F2-stair_north_F1",
         "edges": [
           "stair_north_F4-stair_north_F3",
           "stair_north_F3-stair_north_F2",
@@ -350,6 +350,6 @@
         ]
       }
     },
-    "runtime_s": 5.873
+    "runtime_s": 4.401
   }
 ]
