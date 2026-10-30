@@ -145,14 +145,35 @@ export default function View3D({ building, frame, blocked, routes, onExit }: Pro
     })
 
     let raf = 0
-    const loop = () => { controls.update(); renderer.render(scene, camera); raf = requestAnimationFrame(loop) }
+    // smooth motion: every render frame, people glide toward their latest simulated position
+    const M = new THREE.Matrix4(), hide = new THREE.Matrix4().makeScale(0, 0, 0)
+    let last = performance.now()
+    const loop = () => {
+      const now = performance.now(), dt = Math.min(0.1, (now - last) / 1000); last = now
+      const a = api.current, k = 1 - Math.exp(-dt * 6)
+      if (a.target) {
+        for (let n = 0; n < N; n++) {
+          const tg = a.target[n]
+          if (!tg) { body.setMatrixAt(n, hide); head.setMatrixAt(n, hide); continue }
+          const c = a.cur[n] ?? (a.cur[n] = [tg[0], tg[1]])
+          const jump = Math.hypot(tg[0] - c[0], tg[1] - c[1]) > 25 // new run or restart: snap, do not slide across the map
+          c[0] = jump ? tg[0] : c[0] + (tg[0] - c[0]) * k; c[1] = jump ? tg[1] : c[1] + (tg[1] - c[1]) * k
+          const moving = tg[2] === 'walking' || tg[2] === 'stairs'
+          const bob = moving ? Math.abs(Math.sin(now / 140 + n)) * 0.05 : 0
+          body.setMatrixAt(n, M.makeTranslation(c[0], 0.58 + bob, c[1]))
+          head.setMatrixAt(n, M.makeTranslation(c[0], 1.3 + bob, c[1]))
+        }
+        body.instanceMatrix.needsUpdate = true; head.instanceMatrix.needsUpdate = true
+      }
+      controls.update(); renderer.render(scene, camera); raf = requestAnimationFrame(loop)
+    }
     loop()
     const ro = new ResizeObserver(() => {
       const w = el.clientWidth; renderer.setSize(w, H); camera.aspect = w / H; camera.updateProjectionMatrix()
     })
     ro.observe(el)
 
-    api.current = { ...api.current, scene, body, head, exitMeshes, routeGroup, byId, N }
+    api.current = { ...api.current, scene, body, head, exitMeshes, routeGroup, byId, N, cur: [], target: undefined }
     return () => { cancelAnimationFrame(raf); ro.disconnect(); renderer.dispose(); el.removeChild(renderer.domElement) }
   }, [building])
 
@@ -186,20 +207,19 @@ export default function View3D({ building, frame, blocked, routes, onExit }: Pro
     }
   }, [routes, building])
 
-  // people positions for the current frame
+  // latest simulated positions and colours; the render loop glides people toward them
   useEffect(() => {
-    const { body, head, N } = api.current
+    const { body, N } = api.current
     if (!body) return
-    const M = new THREE.Matrix4(), C = new THREE.Color(), hide = new THREE.Matrix4().makeScale(0, 0, 0)
-    const ppl = frame?.people ?? []
+    const C = new THREE.Color(), ppl = frame?.people ?? []
+    const target: ([number, number, string] | undefined)[] = new Array(N)
     for (let k = 0; k < N; k++) {
       const p = ppl[k]
-      if (!p || p[2] === 'out') { body.setMatrixAt(k, hide); head.setMatrixAt(k, hide); continue }
-      body.setMatrixAt(k, M.makeTranslation(p[0], 0.58, p[1]))
-      head.setMatrixAt(k, M.makeTranslation(p[0], 1.3, p[1]))
+      if (!p || p[2] === 'out') { api.current.cur[k] = undefined; continue }
+      target[k] = p
       body.setColorAt(k, C.set(STATE_COLOR[p[2]] ?? '#8a939b'))
     }
-    body.instanceMatrix.needsUpdate = true; head.instanceMatrix.needsUpdate = true
+    api.current.target = target
     if (body.instanceColor) body.instanceColor.needsUpdate = true
   }, [frame])
 
