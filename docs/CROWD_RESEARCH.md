@@ -1,4 +1,4 @@
-﻿# Crowd Density Research — crush-risk thresholds
+# Crowd Density Research — crush-risk thresholds
 
 Sources opened and cited below. All thresholds are for indoor horizontal movement unless stated.
 
@@ -44,9 +44,10 @@ https://sgsa.org.uk/greenguide/
 
 ## Chinnaswamy Stadium crush — 4 June 2025, Bengaluru
 
-11 people killed outside M. Chinnaswamy Stadium when crowds gathered for RCB IPL victory parade.
-Post-incident analysis (NDTV/The Hindu, June 2025) estimated gate density exceeded 6–7 p/m² in the
-concourse near Gate 6. Primary cause: single narrow gate serving the metro-side concourse.
+11 people killed and 56 injured outside M. Chinnaswamy Stadium during the RCB IPL title celebration.
+Wikipedia ("2025 Bengaluru crowd crush", read 30 Oct 2026) reports crushes at **several gates: 2, 2A, 6, 7, 15,
+17, 18 and 21**. We have **not** verified any density figure or a single root cause, so we state none.
+(Earlier draft text about "6–7 p/m² near Gate 6" and "a single narrow gate" was removed: no source was found.)
 
 Relevance to Nikaas: Crowd mode detects exactly this pattern — a narrow corridor near an exit
 accumulates dangerous density that the nearest-exit plan does not surface.
@@ -66,8 +67,8 @@ Relevant provisions for crowd and exit sizing:
 **Source:** Bureau of Indian Standards, *National Building Code of India 2016*, Part 4: Fire and Life Safety.
 https://www.bis.gov.in/
 
-Relevance to Nikaas: Gate South at Chinnaswamy (modelled at 2.0 m) meets NBC minimum width for ~80 persons,
-but the south stand alone holds ~4 800 people — a factor-of-60 mismatch.
+Relevance to Nikaas: in our **representative** stadium (`data/stadium_gates.json`, not a model of Chinnaswamy),
+Gate South is 2.0 m wide while the south stand holds ~4 800 people. That is an assumption to illustrate the check, not a measurement.
 
 ## Threshold used in nikaas/crowd.py
 

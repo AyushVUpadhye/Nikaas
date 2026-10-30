@@ -77,7 +77,8 @@ def validate(d):
 
 def load(src):
     """src: path or already-parsed dict in the contract format (see docs/CONTRACT.md)."""
-    d = json.loads(Path(src).read_text(encoding="utf-8")) if not isinstance(src, dict) else src
+    # utf-8-sig tolerates a BOM written by some Windows editors
+    d = json.loads(Path(src).read_text(encoding="utf-8-sig")) if not isinstance(src, dict) else src
     nodes = {n["id"]: n for n in d["nodes"]}
     edges, adj = [], {n: [] for n in nodes}
     for e in d["edges"]:
