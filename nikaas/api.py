@@ -43,7 +43,9 @@ except ImportError:  # local runs do not need mangum
 
 @app.get("/health")
 def health():
-    return {"ok": True}
+    # lists the POST routes this deployment serves, so a stale deploy is obvious (e.g. no "optimise")
+    routes = sorted(r.path.strip("/") for r in app.routes if "POST" in getattr(r, "methods", set()))
+    return {"ok": True, "routes": routes}
 
 
 class BuildingRequest(BaseModel):

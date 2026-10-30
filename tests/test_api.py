@@ -24,3 +24,8 @@ def test_frame_every_thins_frames():
     full = c.post("/simulate", json={"building": b}).json()
     thin = c.post("/simulate", json={"building": b, "frame_every": 2}).json()
     assert len(thin["frames"]) < 0.6 * len(full["frames"]) and thin["total_time_s"] == full["total_time_s"]
+
+
+def test_health_lists_routes_so_stale_deploys_are_visible():
+    r = TestClient(app).get("/health").json()
+    assert r["ok"] and {"simulate", "optimise", "validate"} <= set(r["routes"])
