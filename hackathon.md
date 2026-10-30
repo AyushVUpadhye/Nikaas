@@ -15,3 +15,4 @@
 - **12:16** `web/` started: 2D player of the IIT KGP building playing real simulator frames (nearest vs main entrance blocked), handed to Bhumika. Design research method added: `docs/DESIGN_RESEARCH.md`.
 - **12:17** Queued people now get distinct positions in frames (render fix only; evacuation times unchanged). 17 tests pass.
 - **12:25** API responses gzipped (largest run 4.54 MB raw, 0.08 MB on the wire; Lambda limit 6 MB). Roles changed: Chirag takes the website; Bhumika takes pitch, README, demo video and Crowd mode stadium data; Abhijeet keeps AWS + vision.
+- **12:23** Live API verified (Abhijeet's SAM deploy, ap-south-1): `/simulate` on IIT KGP returns 145.25 s, same as local; asked for a redeploy to pick up gzip. Bhumika's task: Crowd mode crush-risk feature (`nikaas/crowd.py`, research-backed density thresholds) plus pitch, README, video, and an hourly improve/research loop.

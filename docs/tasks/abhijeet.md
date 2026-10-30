@@ -22,3 +22,4 @@ Newest at the bottom. Check this section after every `git pull`.
 - **12:00** — No public floor plan of the CSE Labs exists online; if anyone can photograph a real posted evacuation map, test vision on it and compare with `data/lab_block.json`'s format.
 - **12:05** — Test vision on `data/maps/iit_kgp_nmst_block_b.jpg` (real photographed panel) and compare with the hand-digitised `data/iit_kgp_museum.json`. Same photo, so the comparison is fair.
 - **12:25** — README, pitch and demo video moved to Bhumika so you can focus on AWS and vision. Send her the live URL when it is up.
+- **12:23** — Reviewed your deploy: `/health`, `/validate` and `/simulate` work on the live URL and match local results (IIT KGP 145.25 s). Please **redeploy now**: commit 400ffc1 adds gzip, which cuts `/simulate` from ~1.5 MB to under 0.1 MB on the wire (live is still sending 1.5 MB uncompressed). Also: `samconfig.toml` and `docs/DEPLOY.md` are good, thanks.

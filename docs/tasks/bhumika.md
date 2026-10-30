@@ -1,29 +1,56 @@
-# Bhumika — web app, realistic 3D view
+# Bhumika — Crowd mode (crush-risk feature), pitch, proof, demo video
 
-Part of Nikaas (AfterHours 1.0). Read first: `docs/CONTRACT.md` (shared data format) and `docs/TASKS.md` (team rules, checkpoints).
+Part of Nikaas (AfterHours 1.0). Read first: `docs/CONTRACT.md` (shared data format), `docs/TASKS.md`
+(team rules, checkpoints) and `docs/PLAN.md` (pitch, persona, rubric).
 
-Folder: `web/` (Vite + React + TypeScript, no UI kit). Style rules: `docs/VISUAL_STYLE.md`. Research method and gallery links: **`docs/DESIGN_RESEARCH.md`** (do the vibe discovery first).
+You own one product feature (Crowd mode) and how judges experience Nikaas: the story and the evidence.
+Every number you use comes from `docs/RESULTS.md` or a script that writes to `runs/`; never type a number from memory.
 
-1. **2D player (by 15:30):** load `data/frames_sample_nearest.json`; draw rooms/corridors from
-   `data/sample_floor.json` top-down; play frames with play/pause and 1×/2×/4× speed; colour people by `state`
-   (walking orange, queuing red, stairs blue, out hidden). Clock + dot grid of all people + legend with counts.
-2. **Live API (by 19:00):** call `POST /simulate` (local: `uvicorn nikaas.api:app`, URL in `.env`); show
-   nearest vs Nikaas side by side when `/optimise` exists.
-3. **Tap to block:** click an exit → re-run with `blocked` → animate the new plan. Show `bottleneck`.
-4. **3D view (after 19:00):** three.js, white architectural walls, dark floor, human figures, green route ribbons
-   from each room to its exit, fire + red cross on a blocked exit, perspective camera. 2D stays as fallback.
-5. **`?demo=1`** plays saved frames with no backend; check it at 400 px wide too.
+## Your feature: Crowd mode — crush-risk detection
+The Chinnaswamy Stadium crowd crush (Bengaluru, 4 June 2025, 11 killed) is in our problem slide. Crowd mode
+answers: *where will the crowd get dangerously dense, and when?*
 
-Fallback: if 3D is not ready by 03:00, the 2D player is the demo.
+1. **Research first (by 14:00)** — `docs/CROWD_RESEARCH.md`: crowd density levels and when they become
+   dangerous (people per m²), with sources you actually opened (e.g. Fruin's Level of Service, G. Keith Still's
+   crowd-safety work, UK Guide to Safety at Sports Grounds). Write each threshold with its source and link.
+2. **Density from the simulator (by 17:00)** — `nikaas/crowd.py` + `tests/test_crowd.py`: from a `simulate()`
+   result, compute people per m² on each corridor/door area over time (area = edge length × effective width
+   from `nikaas/sim.py`), the peak density per edge, and a `crush_risk` list of edges and times above the
+   threshold from your research. Tests: a hand-checked case (e.g. 40 people queued on a 2 m × 5 m corridor =
+   4 p/m²), and a negative control (a wide, empty corridor is never flagged).
+3. **Stadium building (by 19:00)** — `data/stadium_gates.json` in the contract format: a representative cricket
+   stadium (stands as rooms, concourse as corridors, 4–6 gates as exits, one gate narrow and near the metro).
+   Label it "representative, not measured" in `name`; list assumptions in `docs/QUESTIONS.md`. Done when
+   `POST /validate` returns no problems and `python scripts/run_nearest.py data/stadium_gates.json` writes to `runs/`.
+4. **API field (with Chirag, by 21:00)** — when `crowd.py` is tested, tell Chirag in the team chat; he adds a
+   `crush_risk` field to `/simulate` and shows it in the website (red zones).
+
+## Proof and story
+5. **Pitch script (draft by 17:00, final by 06:00)** — `docs/PITCH.md`, 3 minutes as spoken: problem in the
+   first 15 s, product name, live demo path (what to click and say), the validation line ("reproduces the SFPE
+   handbook example: 245.25 s vs 245.2 s"), the wow number from `docs/RESULTS.md`, Crowd mode, close. Mark who says what.
+6. **What-if sheet (by 23:00)** — `docs/WHATIFS.md`: questions judges are likely to ask (block each exit, double the
+   Audiovisual Hall, a narrower door…), each answered by a run saved in `runs/`.
+7. **README "For judges, start here" (draft by 23:00, final by 06:00)** — top of `README.md`: one-line pitch, live URL
+   (from Abhijeet), video link, 4 bullets with real numbers, how to run, honest "working today / not built yet".
+8. **Finalist PPT (by 23:00)** — update the idea PPT (offline template, max 5 slides) with real numbers and app screenshots.
+9. **Demo video (07:30–08:30)** — record the website's `?demo=1` story (Chirag provides it), ≤ 3 min, captions, no speed-up.
+
+## Keep improving (every hour until 07:30 freeze)
+Do not stop when the list is done. Each hour: `git pull`, read `docs/RESULTS.md` and `hackathon.md` for what changed,
+then pick one thing and commit it:
+- **Research** a claim we make (density thresholds, evacuation speeds, Indian fire-safety rules such as the
+  National Building Code 2016 Part 4) and add the source to the doc that uses it;
+- **Review** the app and the docs as a judge would: anything unclear, unproven or broken goes in your notes to Chirag;
+- **Sharpen** the pitch and what-ifs with the newest numbers; cut anything that is not backed by a run.
+Log each hour's change in `hackathon.md` (one line).
+
+Fallback: if `crowd.py` is not tested by 21:00, Crowd mode is shown as a slide with your research only.
 
 ## Notes from Chirag (build lead)
 Newest at the bottom. Check this section after every `git pull`.
-- **11:47** — `/simulate` now returns `edge_load`: peak queue per edge (`"from-to": count`, busiest first). Use it to colour jammed corridors/stairs red; `bottleneck` is the worst one.
-- **11:47** — Until the API is deployed, use `data/frames_sample_nearest.json` and `data/frames_sample_blockedA.json` (real simulator output, same shape as the API).
-- **11:58** — `/simulate` now also returns `routes`: for each room the list of node ids to its exit. Draw the green escape ribbons along those nodes (coordinates from the building JSON). The sample frames files in `data/` are regenerated with `routes`.
-- **12:00** — New, more realistic building: `data/lab_block.json` (L-shaped block, 2 wings, 3 stairs, 528 people). Frames: `data/frames_lab_block_nearest.json` and `data/frames_lab_block_blockedB.json`. Use this one for the demo view; it is labelled as representative, not measured.
-- **12:05** — **Demo building is now the IIT Kharagpur museum floor plan** (real posted panel from India): `data/iit_kgp_museum.json` + frames `data/frames_iit_kgp_nearest.json`, `data/frames_iit_kgp_blockedMAIN.json`. Rooms have a `label` field (name as printed on the panel) to show in the 3D view. Show the original photo `data/maps/iit_kgp_nmst_block_b.jpg` on the landing screen as "the map we started from".
-- **12:07** — All `data/frames_*.json` regenerated. New optional field `door_routes` (one path per door of a room); `routes` still gives one path per room if you want to keep it simple.
-- **12:10** — All `data/frames_*.json` regenerated with SFPE-validated timings (names unchanged).
-- **12:16** — To keep the 15:30 checkpoint safe I started `web/` (Vite + React + TS): a working 2D player of the IIT Kharagpur building with scenario switch, play/pause, 1-8x speed, clock and live counts. Run: `cd web && npm install && npm run dev`. **It is yours now**: restyle it from `docs/DESIGN_RESEARCH.md`, then add the 3D view, landing page and `?demo=1`. All colours are variables in `web/src/theme.css`. I will not edit `web/` again unless you ask, so no merge conflicts.
-- **12:17** — Frames regenerated: people queuing inside a room are now spread over the floor and drift toward the door (were stacked on one point). Timings unchanged. I refreshed only the data copies in `web/public/data/`, no code.
+- **12:25** — Change of plan: **Chirag now owns the website (`web/`)**. Your work is above: the Crowd mode
+  crush-risk feature (research + `nikaas/crowd.py`) plus pitch, proof, README and the demo video (moved from
+  Abhijeet, who keeps AWS + vision). Useful now: the simulator matches the SFPE handbook example (245.25 s vs
+  245.2 s); on the lab block, closing a stair makes evacuation *faster* than the nearest-exit rule (`docs/RESULTS.md`).
+- **12:28** — The live API is up (Abhijeet): `https://4kzez16ucj.execute-api.ap-south-1.amazonaws.com/health`.
