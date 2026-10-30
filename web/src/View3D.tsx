@@ -12,6 +12,7 @@ type Props = {
   frame?: Frame
   blocked: string[]
   routes?: Record<string, string[][]>
+  edgeLoad?: Record<string, number>
   onExit: (id: string) => void
 }
 
@@ -20,7 +21,7 @@ type Props = {
 const WALL_H = 1.3, WALL_T = 0.18
 const STATE_COLOR: Record<string, string> = { walking: '#f26a2e', queuing: '#c81e1e', stairs: '#2563eb', inside: '#8a939b' }
 
-export default function View3D({ building, frame, blocked, routes, onExit }: Props) {
+export default function View3D({ building, frame, blocked, routes, edgeLoad, onExit }: Props) {
   const host = useRef<HTMLDivElement>(null)
   const api = useRef<any>({})
 
@@ -63,13 +64,15 @@ export default function View3D({ building, frame, blocked, routes, onExit }: Pro
     slab.rotation.x = -Math.PI / 2; slab.position.set(cx, 0, cz); slab.receiveShadow = true; scene.add(slab)
 
     const byId = Object.fromEntries(building.nodes.map(n => [n.id, n]))
-    // walkways between corridor / exit points, as slightly lighter floor strips
+    // walkways between corridor / exit points, as slightly lighter floor strips (one material each: jams turn red)
+    const strips: Record<string, any> = {}
     for (const e of building.edges) {
       const a = byId[e.from], b = byId[e.to]
       if (a.type === 'room' || b.type === 'room') continue
       const len = Math.hypot(b.x - a.x, b.z - a.z)
       if (len < 0.01) continue
-      const strip = new THREE.Mesh(new THREE.PlaneGeometry(len + e.width, e.width), walkMat)
+      const strip = new THREE.Mesh(new THREE.PlaneGeometry(len + e.width, e.width), walkMat.clone())
+      strips[`${e.from}-${e.to}`] = strip; strips[`${e.to}-${e.from}`] = strip
       strip.rotation.x = -Math.PI / 2; strip.rotation.z = -Math.atan2(b.z - a.z, b.x - a.x)
       strip.position.set((a.x + b.x) / 2, 0.01, (a.z + b.z) / 2); strip.receiveShadow = true; scene.add(strip)
     }
@@ -173,7 +176,7 @@ export default function View3D({ building, frame, blocked, routes, onExit }: Pro
     })
     ro.observe(el)
 
-    api.current = { ...api.current, scene, body, head, exitMeshes, routeGroup, byId, N, cur: [], target: undefined }
+    api.current = { ...api.current, scene, body, head, exitMeshes, routeGroup, byId, N, strips, cur: [], target: undefined }
     return () => { cancelAnimationFrame(raf); ro.disconnect(); renderer.dispose(); el.removeChild(renderer.domElement) }
   }, [building])
 
@@ -206,6 +209,18 @@ export default function View3D({ building, frame, blocked, routes, onExit }: Pro
       }
     }
   }, [routes, building])
+
+  // jammed walkways glow red by their peak queue (same rule as the 2D view)
+  useEffect(() => {
+    const strips = api.current.strips as Record<string, any> | undefined
+    if (!strips) return
+    const peak = Math.max(1, ...Object.values(edgeLoad ?? {}))
+    const base = new THREE.Color('#4a4f56'), red = new THREE.Color('#c81e1e')
+    for (const [key, m] of Object.entries(strips)) {
+      const jam = Math.min(1, (edgeLoad?.[key] ?? 0) / peak)
+      m.material.color.copy(base).lerp(red, jam > 0.15 ? 0.3 + 0.7 * jam : 0)
+    }
+  }, [edgeLoad, building])
 
   // latest simulated positions and colours; the render loop glides people toward them
   useEffect(() => {

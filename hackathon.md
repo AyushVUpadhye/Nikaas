@@ -31,3 +31,4 @@
 - **13:16** Research: `docs/METHOD.md` states our times are movement times (RSET also has detection, alarm, pre-movement; SFPE Ch. 56, PD 7974-6:2019) and why the plan comparison is still fair. Landing FAQ updated.
 - **13:22** "Beat Nikaas": `POST /beat` (Ayush's scorer) + website panel; browser-tested against a local API (judge 155 s vs Nikaas 124 s). 40 tests pass.
 - **13:26** 3D: people now glide between simulated positions every render frame (exponential smoothing, snap on large jumps) with a small walking bob, instead of jumping once per simulated second. Browser-checked, no console errors.
+- **13:30** 3D walkways tinted red by peak queue (same rule as 2D). Subtle at overview zoom because people cover the walkways; follow-up: a floating bottleneck marker.
