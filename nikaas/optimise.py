@@ -136,6 +136,46 @@ def lower_bound(b: Building | dict, blocked=()) -> float:
                 A_ub.append(row)
                 b_ub.append(0.0)
 
+    # 4. Stairwell capacity group cuts (for multi-floor buildings with shared stairwell capacity)
+    capacity_groups = {}
+    for e in b.edges:
+        if e.capacity_group:
+            capacity_groups.setdefault(e.capacity_group, []).append(e)
+
+    for g, g_edges in capacity_groups.items():
+        min_eff_w = min(effective_width(e) for e in g_edges)
+        cap_g = min_eff_w * SPECIFIC_FLOW['stair']
+        if cap_g <= 0:
+            continue
+        g_edge_set = {(e.a, e.b) for e in g_edges} | {(e.b, e.a) for e in g_edges}
+
+        pairs_using_g = []
+        walk_times_to_g = []
+        for r in rooms:
+            for ex in open_exits:
+                dist, path = shortest_path(b, r, ex, blocked)
+                if path and any((u, v) in g_edge_set for u, v in zip(path[:-1], path[1:])):
+                    pairs_using_g.append((r, ex))
+                    t_to_g = 0.0
+                    for u, v in zip(path[:-1], path[1:]):
+                        if (u, v) in g_edge_set:
+                            break
+                        for nb, ed in b.adj[u]:
+                            if nb == v:
+                                v_spd = STAIR_SPEED if ed.kind == 'stair' else WALK_SPEED
+                                t_to_g += ed.length / v_spd
+                                break
+                    walk_times_to_g.append(t_to_g)
+
+        if pairs_using_g:
+            min_walk_g = min(walk_times_to_g)
+            row = np.zeros(num_vars)
+            for r, ex in pairs_using_g:
+                row[var_map[(r, ex)]] = 1.0 / cap_g
+            row[T_idx] = -1.0
+            A_ub.append(row)
+            b_ub.append(-min_walk_g)
+
     bounds = [(0.0, None) for _ in range(num_vars)]
 
     res = linprog(c, A_ub=A_ub, b_ub=b_ub, A_eq=A_eq, b_eq=b_eq, bounds=bounds, method="highs")
