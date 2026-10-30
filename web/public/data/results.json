@@ -1,0 +1,92 @@
+[
+ {
+  "building": "iit_kgp_museum.json",
+  "plan": "nearest",
+  "blocked": "",
+  "people": 507,
+  "total_time_s": 145.25,
+  "bottleneck": "g820-VER",
+  "peak_queue": 104,
+  "commit": "36c9916"
+ },
+ {
+  "building": "iit_kgp_museum.json",
+  "plan": "nearest",
+  "blocked": "MAIN",
+  "people": 507,
+  "total_time_s": 318.0,
+  "bottleneck": "g820-VER",
+  "peak_queue": 226,
+  "commit": "36c9916"
+ },
+ {
+  "building": "iit_kgp_museum.json",
+  "plan": "nearest",
+  "blocked": "VER",
+  "people": 507,
+  "total_time_s": 208.25,
+  "bottleneck": "w860-WEST",
+  "peak_queue": 155,
+  "commit": "36c9916"
+ },
+ {
+  "building": "iit_kgp_museum.json",
+  "plan": "nearest",
+  "blocked": "WEST",
+  "people": 507,
+  "total_time_s": 272.25,
+  "bottleneck": "g820-VER",
+  "peak_queue": 207,
+  "commit": "36c9916"
+ },
+ {
+  "building": "lab_block.json",
+  "plan": "nearest",
+  "blocked": "",
+  "people": 528,
+  "total_time_s": 301.25,
+  "bottleneck": "m-34-A",
+  "peak_queue": 175,
+  "commit": "36c9916"
+ },
+ {
+  "building": "lab_block.json",
+  "plan": "nearest",
+  "blocked": "A",
+  "people": 528,
+  "total_time_s": 284.75,
+  "bottleneck": "m30-B",
+  "peak_queue": 184,
+  "commit": "36c9916"
+ },
+ {
+  "building": "lab_block.json",
+  "plan": "nearest",
+  "blocked": "B",
+  "people": 528,
+  "total_time_s": 437.5,
+  "bottleneck": "m-34-A",
+  "peak_queue": 256,
+  "commit": "36c9916"
+ },
+ {
+  "building": "sample_floor.json",
+  "plan": "nearest",
+  "blocked": "",
+  "people": 300,
+  "total_time_s": 156.5,
+  "bottleneck": "c_w-A",
+  "peak_queue": 91,
+  "commit": "36c9916"
+ },
+ {
+  "building": "sample_floor.json",
+  "plan": "nearest",
+  "blocked": "A",
+  "people": 300,
+  "total_time_s": 262.25,
+  "bottleneck": "c_e-B",
+  "peak_queue": 184,
+  "commit": "36c9916"
+ }
+]

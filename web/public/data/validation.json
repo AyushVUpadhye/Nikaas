@@ -1,0 +1,8 @@
+{
+ "when": "2026-10-30T12:31:46",
+ "case": "SFPE Engineering Guide Example 1",
+ "published_s": 245.2,
+ "ours_s": 245.25,
+ "error_pct": 0.02,
+ "commit": "9d5fe35"
+}

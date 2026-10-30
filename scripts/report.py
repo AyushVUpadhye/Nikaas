@@ -1,6 +1,7 @@
 """Generate docs/RESULTS.md from runs/*.csv so the numbers shown to judges cannot drift.
 Latest run per (building, plan, blocked) wins."""
 import csv
+import json
 from pathlib import Path
 
 rows = {}
@@ -14,3 +15,10 @@ for (b, p, bl), r in sorted(rows.items()):
     out.append(f"| {b} | {p} | {bl or '-'} | {r['people']} | {r['total_time_s']} | {r['per_exit']} | {r['bottleneck']} ({r['peak_queue']}) | {r['commit']} |")
 Path("docs/RESULTS.md").write_text("\n".join(out) + "\n", encoding="utf-8")
 print("\n".join(out))
+
+# same numbers for the website (landing-page stats), so the site cannot drift from runs/ either
+web = Path("web/public/data")
+if web.exists():
+    json.dump([{"building": b, "plan": p, "blocked": bl, "people": int(r["people"]), "total_time_s": float(r["total_time_s"]),
+                "bottleneck": r["bottleneck"], "peak_queue": int(r["peak_queue"]), "commit": r["commit"]}
+               for (b, p, bl), r in sorted(rows.items())], (web / "results.json").open("w"), indent=1)
