@@ -8,6 +8,11 @@ Globals:
     MemorySize: 2048 # >= 1769 MB = one full vCPU; /optimise on lab_block takes ~8 s on a laptop core
     Runtime: python3.11
     Architectures: [x86_64]
+  HttpApi:
+    # public API with no login: cap traffic so nobody can burn the AWS credits (every /vision call costs Bedrock)
+    DefaultRouteSettings:
+      ThrottlingRateLimit: 10 # requests per second, steady
+      ThrottlingBurstLimit: 20
 
 Resources:
   # FastAPI app (nikaas/api.py) wrapped by Mangum. Every path and method goes to it.

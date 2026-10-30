@@ -75,4 +75,6 @@ The API URL comes from `web/.env.production` at build time.
 - Bedrock is called in `us-east-1` (env var `BEDROCK_REGION`, model `BEDROCK_MODEL`, default Nova Pro) until
   ap-south-1 Bedrock access is verified.
 - First request after idle takes ~3 s (Lambda cold start); later ones are fast.
+- The API is rate-limited to 10 requests/s (bursts of 20) in `template.yaml`, so a public URL cannot burn the
+  AWS credits through `/vision` (Bedrock). Raise it there if a demo needs more.
 - API Gateway stops waiting after 30 s; `/vision` runs its two Bedrock calls in parallel to stay well under that.
