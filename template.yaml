@@ -13,6 +13,10 @@ Globals:
     DefaultRouteSettings:
       ThrottlingRateLimit: 10 # requests per second, steady
       ThrottlingBurstLimit: 20
+    RouteSettings:
+      "GET /drill": # every judge's phone polls this during Live Drill (cheap: one small S3 read)
+        ThrottlingRateLimit: 30
+        ThrottlingBurstLimit: 60
 
 Resources:
   # FastAPI app (nikaas/api.py) wrapped by Mangum. Every path and method goes to it.
@@ -26,16 +30,29 @@ Resources:
           # Bedrock is called in us-east-1 until ap-south-1 access is verified
           BEDROCK_REGION: us-east-1
           PHOTO_BUCKET: !Ref PhotoBucket
+          # Live Drill state (drill/state.json) is shared by all Lambda instances through S3 (nikaas/drill.py)
+          NIKAAS_DRILL_BUCKET: !Ref PhotoBucket
       Policies:
         - Statement:
             - Effect: Allow
               Action: [bedrock:InvokeModel] # also covers the Converse API
               Resource: "*"
+            - Effect: Allow
+              Action: [s3:GetObject, s3:PutObject]
+              Resource: !Sub "${PhotoBucket.Arn}/drill/*"
+            - Effect: Allow # lets a missing drill/state.json read as NoSuchKey ("no drill running"), not AccessDenied
+              Action: s3:ListBucket
+              Resource: !GetAtt PhotoBucket.Arn
         - S3WritePolicy:
             BucketName: !Ref PhotoBucket
       Events:
         Api:
           Type: HttpApi # no Path = catch-all $default route; FastAPI does routing and CORS
+        DrillPoll:
+          Type: HttpApi # own route only so it can have a higher rate limit (RouteSettings above)
+          Properties:
+            Path: /drill
+            Method: GET
 
   # Floor-plan photos sent to POST /vision and what vision made of them (photos/, results/). Private.
   PhotoBucket:

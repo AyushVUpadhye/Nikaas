@@ -18,8 +18,11 @@ The API is `nikaas/api.py` as-is: same routes as local, CORS open, gzip on.
 | `POST /beat` | time a hand-made `plan` against the optimiser ("Beat Nikaas"). ~3 s. |
 | `POST /qa` | graph quality score and warnings (`nikaas/graph_qa.py`). <1 s. |
 | `POST /vision` | photo of a floor plan → building graph (+ `quality`). ~20 s. |
+| `POST /drill` | Live Drill, presenter: start a drill / block exits; the optimiser re-plans every room. ~3 s. |
+| `GET /drill?room=` | Live Drill, phones: that room's exit, distance, walk time, and `alert` when it changed. |
 
-Last checked live on 30 Oct 14:15 IST: all routes 200, museum `/simulate` 145.25 s, `/optimise` 124.0 s.
+Last checked live on 30 Oct 14:40 IST: all routes 200, museum `/simulate` 145.25 s, `/optimise` 124.0 s; Live Drill:
+avhall → West steps 11.7 m, then with WEST blocked → alert, Main entrance 74.2 m.
 
 ### `POST /vision`
 
@@ -76,5 +79,11 @@ The API URL comes from `web/.env.production` at build time.
   ap-south-1 Bedrock access is verified.
 - First request after idle takes ~3 s (Lambda cold start); later ones are fast.
 - The API is rate-limited to 10 requests/s (bursts of 20) in `template.yaml`, so a public URL cannot burn the
-  AWS credits through `/vision` (Bedrock). Raise it there if a demo needs more.
+  AWS credits through `/vision` (Bedrock). `GET /drill` (phones polling) has its own 30 req/s (bursts of 60).
+  Raise them there if a demo needs more.
+- Live Drill state is one object, `drill/state.json`, in the private photo bucket (env `NIKAAS_DRILL_BUCKET`), so
+  every Lambda instance sees the same drill. To end a drill so phones show "no drill running":
+  `aws s3 rm s3://nikaas-photobucket-dq7kzxtwwyzx/drill/state.json --region ap-south-1`
+- Fonts must be served as `font/woff2`: after publishing the website, run
+  `aws s3 cp web/dist/fonts s3://nikaas-webbucket-hbkfctr0cw8s/fonts --recursive --content-type font/woff2`
 - API Gateway stops waiting after 30 s; `/vision` runs its two Bedrock calls in parallel to stay well under that.
