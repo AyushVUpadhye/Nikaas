@@ -10,6 +10,11 @@ Twins, by **TheGoodEngineers** (team AH50): Ayush V U, Bhumika G, Abhijeet, Chir
 > Status: in progress during the hackathon. Every number in this README will come from a file in
 > `runs/`. If a number has no file behind it, it is not here.
 
+## Validated
+The simulator reproduces the SFPE Engineering Guide's Example 1 (300 people, two doors, two stairs):
+**245.25 s vs the published 245.2 s** (`tests/test_sim.py::test_reproduces_sfpe_engineering_guide_example_1`).
+All results: [`docs/RESULTS.md`](docs/RESULTS.md), generated from `runs/`.
+
 ## Demo building
 A real posted floor-plan panel: **Nehru Museum of Science & Technology, Block B, IIT Kharagpur**,
 digitised into `data/iit_kgp_museum.json` (`scripts/make_iit_kgp.py`; overlay check in

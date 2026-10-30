@@ -2,11 +2,12 @@
 
 | Building | Plan | Blocked exit | People | Evacuation time (s) | People per exit | Bottleneck (peak queue) | Commit |
 |---|---|---|---|---|---|---|---|
-| iit_kgp_museum.json | nearest | - | 507 | 112.75 | {'MAIN': 203, 'WEST': 149, 'VER': 155} | g820-VER (99) | 68a65a8 |
-| iit_kgp_museum.json | nearest | MAIN | 507 | 242.75 | {'MAIN': 0, 'WEST': 149, 'VER': 358} | g820-VER (210) | 68a65a8 |
-| iit_kgp_museum.json | nearest | WEST | 507 | 208.25 | {'MAIN': 203, 'WEST': 0, 'VER': 304} | g820-VER (194) | 68a65a8 |
-| lab_block.json | nearest | - | 528 | 211.75 | {'A': 264, 'B': 194, 'C': 70} | m-34-A (153) | cc8c457 |
-| lab_block.json | nearest | A | 528 | 227.0 | {'A': 0, 'B': 458, 'C': 70} | m30-B (161) | cc8c457 |
-| lab_block.json | nearest | B | 528 | 305.75 | {'A': 388, 'B': 0, 'C': 140} | m-34-A (224) | cc8c457 |
-| sample_floor.json | nearest | - | 300 | 119.0 | {'A': 174, 'B': 126} | c_w-A (92) | cc8c457 |
-| sample_floor.json | nearest | A | 300 | 196.75 | {'A': 0, 'B': 300} | c_e-B (162) | cc8c457 |
+| iit_kgp_museum.json | nearest | - | 507 | 145.25 | {'MAIN': 203, 'WEST': 149, 'VER': 155} | g820-VER (104) | 36c9916 |
+| iit_kgp_museum.json | nearest | MAIN | 507 | 318.0 | {'MAIN': 0, 'WEST': 149, 'VER': 358} | g820-VER (226) | 36c9916 |
+| iit_kgp_museum.json | nearest | VER | 507 | 208.25 | {'MAIN': 263, 'WEST': 244, 'VER': 0} | w860-WEST (155) | 36c9916 |
+| iit_kgp_museum.json | nearest | WEST | 507 | 272.25 | {'MAIN': 203, 'WEST': 0, 'VER': 304} | g820-VER (207) | 36c9916 |
+| lab_block.json | nearest | - | 528 | 301.25 | {'A': 264, 'B': 194, 'C': 70} | m-34-A (175) | 36c9916 |
+| lab_block.json | nearest | A | 528 | 284.75 | {'A': 0, 'B': 458, 'C': 70} | m30-B (184) | 36c9916 |
+| lab_block.json | nearest | B | 528 | 437.5 | {'A': 388, 'B': 0, 'C': 140} | m-34-A (256) | 36c9916 |
+| sample_floor.json | nearest | - | 300 | 156.5 | {'A': 174, 'B': 126} | c_w-A (91) | 36c9916 |
+| sample_floor.json | nearest | A | 300 | 262.25 | {'A': 0, 'B': 300} | c_e-B (184) | 36c9916 |
