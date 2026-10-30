@@ -1,7 +1,25 @@
 {
  "status": "warning",
- "score": 88.0,
+ "score": 58.0,
  "warnings": [
+  {
+   "code": "INSUFFICIENT_EXIT_CAPACITY",
+   "severity": "warning",
+   "message": "Total occupant load (671) requires estimated 319.6 s to flow through aggregate exit capacity (2.10 persons/s), exceeding the 150 s evacuation flow heuristic.",
+   "elements": [
+    "EXIT_MAIN"
+   ],
+   "suggestion": "Add additional exit doors or widen existing exits to increase aggregate egress flow capacity."
+  },
+  {
+   "code": "INSUFFICIENT_EXIT_COUNT",
+   "severity": "warning",
+   "message": "Building has only 1 accessible exit ('EXIT_MAIN') for 671 occupants. Under NBC 2016 Part 4 (Clause 4.4.2.1), spaces with > 50 occupants require at least 2 remote exits to prevent single-point-of-failure trapping.",
+   "elements": [
+    "EXIT_MAIN"
+   ],
+   "suggestion": "Verify building perimeter for missing exterior doors, emergency exits, or fire escapes."
+  },
   {
    "code": "SUSPICIOUS_DOOR_LENGTH",
    "severity": "warning",
@@ -32,5 +50,8 @@
    "suggestion": "Verify if walkway at 'p9' extends to adjacent spaces."
   }
  ],
- "repair_suggestions": []
+ "repair_suggestions": [
+  "Increase exit capacity by adding exits or widening doors to achieve <= 150 s flow time.",
+  "Add a second remote exit to comply with NBC 2016 Part 4 minimum egress requirements (> 50 occupants)."
+ ]
 }

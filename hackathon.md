@@ -46,3 +46,4 @@
 - **14:05** Wired Ayush's `/qa` graph check into the Twin's photo-read banner (Nova Pro graph 88/100). Suggested an exit-capacity check. `?demo=1` re-verified with the new pages.
 - **14:10** Live website Nikaas plan verified on AWS (7.1 s, 21.3 s faster). `/optimise` now takes `simulate: true` and returns the simulated plan in one call (website falls back if the deployment is older).
 - **14:15** Public site verified end to end on AWS: redesign live on S3, Nikaas plan 3.6 s (21.3 s faster), Beat Nikaas live. README now links the live site and API.
+- **14:19** Ayush: exit-capacity + NBC minimum-exits check in graph QA; photo-read graph 58/100 (1 exit for 671 people), hand graphs 100. 91 tests pass.
