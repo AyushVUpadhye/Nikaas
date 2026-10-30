@@ -10,6 +10,8 @@ from dataclasses import dataclass, field
 
 CRUSH_THRESHOLD = 4.0    # p/m²  — crowd forces can reach fatal levels (G.K. Still)
 CONCERN_THRESHOLD = 2.7  # p/m²  — LoS E boundary; UK Green Guide cap for stadia
+PHYSICAL_CAP = 10.0      # p/m²  — absolute physical maximum for standing humans; clamped because
+                          #         the simulator stacks queuing people at grid nodes, not spread physically
 
 
 def _edge_area(edge_id: str, building: dict) -> float:
@@ -49,6 +51,19 @@ def _edge_area(edge_id: str, building: dict) -> float:
             length = 1.0
 
     return max(0.1, eff_width * length)
+
+
+def _in_any_room(px: float, pz: float, nodes: dict) -> bool:
+    """Return True if (px, pz) lies inside any room's bounding rectangle."""
+    for n in nodes.values():
+        if n.get("type") != "room":
+            continue
+        hw = n.get("w", 0) / 2
+        hd = n.get("d", 0) / 2
+        rx, rz = n.get("x", 0), n.get("z", 0)
+        if rx - hw <= px <= rx + hw and rz - hd <= pz <= rz + hd:
+            return True
+    return False
 
 
 def _point_to_segment_dist(px: float, pz: float, ax: float, az: float, bx: float, bz: float) -> float:
@@ -115,6 +130,9 @@ def analyse(sim_result: dict, building: dict) -> dict:
         for (px, pz, st) in frame["people"]:
             if st in ("out", "inside"):
                 continue
+            # skip people who are still geometrically inside a room (e.g. queuing before the door)
+            if _in_any_room(px, pz, nodes):
+                continue
             best_eid, best_d = None, float("inf")
             for eid, (ax, az, bx, bz) in seg_cache.items():
                 d = _point_to_segment_dist(px, pz, ax, az, bx, bz)
@@ -137,8 +155,8 @@ def analyse(sim_result: dict, building: dict) -> dict:
     for eid, densities in per_edge.items():
         if not densities:
             continue
-        peak = max(densities)
-        peak_t = frame_times[densities.index(peak)] if frame_times else 0.0
+        peak = min(max(densities), PHYSICAL_CAP)
+        peak_t = frame_times[densities.index(max(densities))] if frame_times else 0.0
         area = area_cache.get(eid, 1.0)
         edge_density[eid] = {
             "area_m2": round(area, 2),
@@ -149,6 +167,7 @@ def analyse(sim_result: dict, building: dict) -> dict:
             max_density = peak
             worst_edge = eid
         for i, d in enumerate(densities):
+            d = min(d, PHYSICAL_CAP)
             if d >= CRUSH_THRESHOLD:
                 entry_t = frame_times[i]
                 crush_risk.append({"edge_id": eid, "t": entry_t, "density": round(d, 2), "level": "crush"})

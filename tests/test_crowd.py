@@ -1,7 +1,11 @@
 ﻿"""Tests for nikaas/crowd.py — crowd density and crush-risk detection."""
+import json
 import math
+import pathlib
 import pytest
 from nikaas.crowd import analyse, narrative, CRUSH_THRESHOLD, CONCERN_THRESHOLD
+from nikaas.building import load
+from nikaas.sim import simulate
 
 
 # ── minimal building helpers ──────────────────────────────────────────────────
@@ -170,3 +174,29 @@ def test_narrative_crush():
     assert "stadium" in text
     assert "crush" in text.lower()
     assert "3" in text  # first_crush_t = 3.0 s should appear
+
+
+# ── integration: physical densities on real building ──────────────────────────
+
+def test_iit_kgp_museum_physical_densities():
+    """No corridor edge should exceed 10 p/m² on the IIT KGP museum.
+
+    Densities above 10 p/m² are not physically possible for standing humans
+    and indicate a bug (e.g. room-interior people assigned to a corridor edge).
+    """
+    DATA = pathlib.Path(__file__).parent.parent / "data" / "iit_kgp_museum.json"
+    building_json = json.loads(DATA.read_bytes().decode("utf-8-sig"))
+    from nikaas.building import nearest_plan
+    b = load(building_json)
+    plan = nearest_plan(b, set())
+    sim = simulate(b, plan, set(), frame_every=5.0)
+    result = analyse(sim, building_json)
+
+    over_ten = {
+        eid: rec["peak_density"]
+        for eid, rec in result["edge_density"].items()
+        if rec["peak_density"] > 10.0
+    }
+    assert not over_ten, (
+        f"Non-physical edge densities (>10 p/m²) found: {over_ten}"
+    )
