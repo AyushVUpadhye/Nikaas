@@ -62,6 +62,25 @@ export default function App() {
     return () => clearInterval(id)
   }, [run, playing, speed])
 
+  // ?demo=1: a hands-free story for the demo video. Landing for 4 s, then the nearest-exit run,
+  // then the main entrance is blocked and the re-planned run plays. Uses saved runs only (no network).
+  const [caption, setCaption] = useState('')
+  useEffect(() => {
+    if (!DEMO) return
+    const t = setTimeout(() => document.getElementById('try')?.scrollIntoView({ behavior: 'smooth' }), 4000)
+    return () => clearTimeout(t)
+  }, [])
+  useEffect(() => {
+    if (!DEMO || !run) return
+    if (!blocked.length) setCaption('Today: everyone takes the nearest exit. Watch where the queues form.')
+    else setCaption('The main entrance is blocked. Everyone is re-routed to the two exits left, live.')
+    const atEnd = i >= run.frames.length - 1
+    if (atEnd && !blocked.length) {
+      const t = setTimeout(() => setBlocked(['MAIN']), 2500)
+      return () => clearTimeout(t)
+    }
+  }, [run, i, blocked])
+
   const view = useMemo(() => {
     if (!building) return undefined
     const xs = building.nodes.map(n => n.x), zs = building.nodes.map(n => n.z)
@@ -150,6 +169,7 @@ export default function App() {
         {[1, 2, 4, 8].map(v => <button key={v} className={v === speed ? 'on' : ''} onClick={() => setSpeed(v)}>{v}×</button>)}
         <button onClick={() => setI(0)}>Restart</button>
       </div>
+      {DEMO && caption && <div style={{ background: '#111417', color: '#fff', padding: '12px 16px', marginBottom: 12, fontSize: 20 }}>{caption}</div>}
       {error && <div role="alert" style={{ background: '#fdecec', border: '1px solid var(--queue)', padding: '8px 12px', marginBottom: 12 }}>{error}</div>}
       <div className="layout">
         <div style={{ position: 'relative' }}>
