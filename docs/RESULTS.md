@@ -9,8 +9,10 @@
 | lab_block.json | nearest | - | 528 | 301.25 | {'A': 264, 'B': 194, 'C': 70} | m-34-A (175) | 36c9916 |
 | lab_block.json | nearest | A | 528 | 284.75 | {'A': 0, 'B': 458, 'C': 70} | m30-B (184) | 36c9916 |
 | lab_block.json | nearest | B | 528 | 437.5 | {'A': 388, 'B': 0, 'C': 140} | m-34-A (256) | 36c9916 |
+| lab_block.json | nearest | C | 528 | 301.25 | {'A': 264, 'B': 264, 'C': 0} | m-34-A (175) | aab920d |
 | sample_floor.json | nearest | - | 300 | 156.5 | {'A': 174, 'B': 126} | c_w-A (91) | 36c9916 |
 | sample_floor.json | nearest | A | 300 | 262.25 | {'A': 0, 'B': 300} | c_e-B (184) | 36c9916 |
+| whatif_lab_block_seminar_x2.json | nearest | - | 648 | 433.0 | {'A': 384, 'B': 194, 'C': 70} | m-34-A (254) | aab920d |
 
 ## Nikaas plan vs nearest exit (`runs/wow.csv`)
 

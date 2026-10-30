@@ -33,3 +33,4 @@
 - **13:26** 3D: people now glide between simulated positions every render frame (exponential smoothing, snap on large jumps) with a small walking bob, instead of jumping once per simulated second. Browser-checked, no console errors.
 - **13:30** 3D walkways tinted red by peak queue (same rule as 2D). Subtle at overview zoom because people cover the walkways; follow-up: a floating bottleneck marker.
 - **13:30** (Bhumika) Restored PITCH.md, WHATIFS.md, CROWD_RESEARCH.md (dropped in rebase). Updated pitch wow number to 301→167 s (44.6%, from runs/wow.csv); fixed "movement time" language throughout per Chirag 13:16 note. WHATIFS tables use "movement time" header. README "For judges" section updated with real numbers from runs/.
+- **13:35** Reviewed Bhumika (pitch, what-ifs, crowd research, README judges block). Corrected two overclaims (lower bound wording; Crowd mode not built). New what-if runs: lab block C blocked 301.25 s (unchanged), seminar doubled 433.0 s.

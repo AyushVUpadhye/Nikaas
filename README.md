@@ -3,10 +3,10 @@
 ## For judges, start here
 **Nikaas is an open-source evacuation digital twin** — photograph a posted exit map, and Nikaas times the evacuation and finds the room-to-exit assignment that moves everyone out fastest.
 
-- **44.6% faster** evacuation movement time on the demo lab block: nearest-exit rule 301 s → Nikaas optimal plan 167 s, saving 134 s for 528 people (`runs/wow.csv`).
-- **Within 3.71 s of the proven lower bound** — mathematically, no room assignment can do better with the same exits and widths.
+- **44.6% faster** evacuation movement time on the demo lab block: nearest-exit rule 301 s → Nikaas plan 167 s, saving 134 s for 528 people (`runs/wow.csv`).
+- **Within 3.71 s of a proven lower bound** — no plan can move everyone out faster than 163.04 s with the same exits and widths, and Nikaas reaches 166.75 s (`runs/wow.csv`).
 - **Validated against SFPE Handbook Example 1**: 245.25 s vs the published 245.2 s (0.05 s error, `tests/test_sim.py`).
-- **Crowd mode**: flags corridors above 4 p/m² (G. Keith Still's crush threshold) — shows which gate becomes dangerous first in a stadium panic.
+- **Crowd mode (in progress, not built yet)**: will flag corridors above the crowd-density thresholds researched in `docs/CROWD_RESEARCH.md`.
 
 Live site: *(Abhijeet's URL — fill before submission)* · Demo video: *(fill before submission)*
 

@@ -14,7 +14,7 @@ Numbers to fill: run the scenarios with `python scripts/run_nearest.py <building
 | None | 301.25 s | — | m-34-A (175) |
 | A (west) | **284.75 s** | −16.5 s (faster!) | m30-B (184) |
 | B (main) | 437.5 s | +136.25 s | m-34-A (256) |
-| C (side wing) | *(not in runs/ yet)* | | |
+| C (side wing) | 301.25 s | ±0 s (C's 70 people move to B, which has spare capacity; A stays the bottleneck) | m-34-A (175) |
 
 Note: blocking A is faster because A was the bottleneck; removing it redistributes flow to B and C which have spare capacity — counterintuitive result from the hydraulic model (SFPE Ch. 56).
 
@@ -33,9 +33,9 @@ Source: `docs/RESULTS.md`.
 
 ## 2. "What if you double the Audiovisual / seminar hall occupancy?"
 
-Building: lab_block.json, seminar room default 120 people.
-Run with seminar.people = 240 and record result in `runs/`.
-*(run needed — note in hackathon.md once done)*
+Building: `data/whatif_lab_block_seminar_x2.json` (lab block with the seminar hall doubled to 240; 648 people in total).
+Movement time with the nearest-exit rule: **433.0 s** (vs 301.25 s), people per exit A 384 / B 194 / C 70, bottleneck m-34-A (peak queue 254).
+The extra 120 people all join the narrow west stair A. Source: `runs/results.csv` / `docs/RESULTS.md`.
 
 ---
 
