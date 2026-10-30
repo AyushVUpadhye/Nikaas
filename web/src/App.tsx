@@ -5,7 +5,7 @@ type Node = { id: string; type: 'room' | 'corridor' | 'exit'; x: number; z: numb
 type Building = { name: string; nodes: Node[]; edges: { from: string; to: string; width: number }[] }
 type Frame = { t: number; people: [number, number, string][] }
 type Run = {
-  total_time_s: number; per_exit: Record<string, number>; bottleneck: string; peak_queue: number
+  total_time_s: number; per_exit: Record<string, number>; bottleneck: string; peak_queue: number; edge_load?: Record<string, number>
   frames: Frame[]; door_routes?: Record<string, string[][]>
   lower_bound_s?: number; nearest_s?: number // set for Nikaas plans
 }
@@ -137,7 +137,10 @@ export default function App() {
     g.lineCap = 'round'; g.lineJoin = 'round'
     for (const e of building.edges) {
       const [ax, az] = P(byId[e.from].x, byId[e.from].z), [bx, bz] = P(byId[e.to].x, byId[e.to].z)
-      g.strokeStyle = '#e2e6ea'; g.lineWidth = Math.max(2, e.width * s)
+      // jammed corridors turn red by their peak queue (idea from Bhumika's first version)
+      const load = run?.edge_load?.[`${e.from}-${e.to}`] ?? run?.edge_load?.[`${e.to}-${e.from}`] ?? 0
+      const jam = Math.min(1, load / Math.max(1, run?.peak_queue ?? 1))
+      g.strokeStyle = jam > 0.15 ? `rgba(200, 30, 30, ${0.25 + 0.6 * jam})` : '#e2e6ea'; g.lineWidth = Math.max(2, e.width * s)
       g.beginPath(); g.moveTo(ax, az); g.lineTo(bx, bz); g.stroke()
     }
     // escape routes: one ribbon per door of each room, to its assigned exit
@@ -243,6 +246,14 @@ export default function App() {
           </div>
         </aside>
       </div>
+      {run && (
+        <label style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 12, fontFamily: 'var(--mono)', fontSize: 13 }}>
+          <span>{fmt(f?.t ?? 0)}</span>
+          <input type="range" min={0} max={run.frames.length - 1} value={i} aria-label="Evacuation timeline"
+            onChange={e => { setPlaying(false); setI(Number(e.target.value)) }} style={{ flex: 1, accentColor: 'var(--accent)' }} />
+          <span>{fmt(run.total_time_s)}</span>
+        </label>
+      )}
     </main>
   )
 }
