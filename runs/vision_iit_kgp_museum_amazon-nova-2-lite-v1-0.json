@@ -1,0 +1,700 @@
+{
+ "nodes": [
+  {
+   "id": "office",
+   "type": "room",
+   "label": "OFFICE",
+   "use": "office",
+   "x": 63.8,
+   "z": 28.1,
+   "w": 13.2,
+   "d": 10.5,
+   "people": 21
+  },
+  {
+   "id": "reception",
+   "type": "room",
+   "label": "RECEPTION",
+   "use": "lobby",
+   "x": 75.7,
+   "z": 28.1,
+   "w": 10.6,
+   "d": 10.5,
+   "people": 34
+  },
+  {
+   "id": "rail_transport_in_india",
+   "type": "room",
+   "label": "RAIL TRANSPORT IN INDIA",
+   "use": "gallery",
+   "x": 63.8,
+   "z": 19.0,
+   "w": 13.2,
+   "d": 7.6,
+   "people": 30
+  },
+  {
+   "id": "water_transport_gallery",
+   "type": "room",
+   "label": "WATER TRANSPORT GALLERY",
+   "use": "gallery",
+   "x": 51.5,
+   "z": 19.0,
+   "w": 11.4,
+   "d": 7.6,
+   "people": 26
+  },
+  {
+   "id": "aviation_and_space",
+   "type": "room",
+   "label": "AVIATION AND SPACE",
+   "use": "gallery",
+   "x": 40.0,
+   "z": 19.0,
+   "w": 11.4,
+   "d": 7.6,
+   "people": 26
+  },
+  {
+   "id": "computing_machines",
+   "type": "room",
+   "label": "COMPUTING MACHINES",
+   "use": "gallery",
+   "x": 28.6,
+   "z": 19.0,
+   "w": 11.4,
+   "d": 7.6,
+   "people": 26
+  },
+  {
+   "id": "principles_of_mechanics",
+   "type": "room",
+   "label": "PRINCIPLES OF MECHANICS",
+   "use": "gallery",
+   "x": 45.8,
+   "z": 11.4,
+   "w": 22.9,
+   "d": 7.6,
+   "people": 52
+  },
+  {
+   "id": "electricity_and_magnetics",
+   "type": "room",
+   "label": "ELECTRICITY AND MAGNETICS",
+   "use": "gallery",
+   "x": 63.8,
+   "z": 11.4,
+   "w": 13.2,
+   "d": 7.6,
+   "people": 30
+  },
+  {
+   "id": "mathematics_gallery",
+   "type": "room",
+   "label": "MATHEMATICS GALLERY",
+   "use": "gallery",
+   "x": 75.7,
+   "z": 11.4,
+   "w": 10.6,
+   "d": 7.6,
+   "people": 24
+  },
+  {
+   "id": "machine_motion_light_and_sound",
+   "type": "room",
+   "label": "MACHINE, MOTION, LIGHT AND SOUND",
+   "use": "gallery",
+   "x": 52.3,
+   "z": 3.8,
+   "w": 36.0,
+   "d": 7.6,
+   "people": 82
+  },
+  {
+   "id": "auditorium",
+   "type": "room",
+   "label": "AUDITORIAL HALL",
+   "use": "seated_hall",
+   "x": 11.4,
+   "z": 28.1,
+   "w": 22.9,
+   "d": 10.5,
+   "people": 360
+  },
+  {
+   "id": "dharamshala",
+   "type": "room",
+   "label": "DHARAMSHALA",
+   "use": "other",
+   "x": 11.4,
+   "z": 15.2,
+   "w": 22.9,
+   "d": 15.2,
+   "people": 104
+  },
+  {
+   "id": "taramondal",
+   "type": "room",
+   "label": "TARAMONDAL",
+   "use": "gallery",
+   "x": 28.6,
+   "z": 28.1,
+   "w": 11.4,
+   "d": 10.5,
+   "people": 36
+  },
+  {
+   "id": "p1",
+   "type": "corridor",
+   "x": 81.0,
+   "z": 33.3
+  },
+  {
+   "id": "p2",
+   "type": "corridor",
+   "x": 81.0,
+   "z": 22.8
+  },
+  {
+   "id": "p3",
+   "type": "corridor",
+   "x": 81.0,
+   "z": 15.2
+  },
+  {
+   "id": "p4",
+   "type": "corridor",
+   "x": 81.0,
+   "z": 7.6
+  },
+  {
+   "id": "p5",
+   "type": "corridor",
+   "x": 70.4,
+   "z": 7.6
+  },
+  {
+   "id": "p6",
+   "type": "corridor",
+   "x": 70.4,
+   "z": 15.2
+  },
+  {
+   "id": "p7",
+   "type": "corridor",
+   "x": 70.4,
+   "z": 22.8
+  },
+  {
+   "id": "p8",
+   "type": "corridor",
+   "x": 70.4,
+   "z": 33.3
+  },
+  {
+   "id": "p9",
+   "type": "corridor",
+   "x": 57.2,
+   "z": 33.3
+  },
+  {
+   "id": "p10",
+   "type": "corridor",
+   "x": 57.2,
+   "z": 22.8
+  },
+  {
+   "id": "p11",
+   "type": "corridor",
+   "x": 57.2,
+   "z": 15.2
+  },
+  {
+   "id": "p12",
+   "type": "corridor",
+   "x": 57.2,
+   "z": 7.6
+  },
+  {
+   "id": "p13",
+   "type": "corridor",
+   "x": 45.8,
+   "z": 22.8
+  },
+  {
+   "id": "p14",
+   "type": "corridor",
+   "x": 45.8,
+   "z": 15.2
+  },
+  {
+   "id": "p15",
+   "type": "corridor",
+   "x": 34.3,
+   "z": 22.8
+  },
+  {
+   "id": "p16",
+   "type": "corridor",
+   "x": 34.3,
+   "z": 15.2
+  },
+  {
+   "id": "p17",
+   "type": "corridor",
+   "x": 34.3,
+   "z": 7.6
+  },
+  {
+   "id": "p18",
+   "type": "corridor",
+   "x": 22.9,
+   "z": 22.8
+  },
+  {
+   "id": "p19",
+   "type": "corridor",
+   "x": 22.9,
+   "z": 15.2
+  },
+  {
+   "id": "p20",
+   "type": "corridor",
+   "x": 22.9,
+   "z": 7.6
+  },
+  {
+   "id": "p21",
+   "type": "corridor",
+   "x": 11.4,
+   "z": 22.8
+  },
+  {
+   "id": "p22",
+   "type": "corridor",
+   "x": 11.4,
+   "z": 15.2
+  },
+  {
+   "id": "p23",
+   "type": "corridor",
+   "x": 11.4,
+   "z": 7.6
+  },
+  {
+   "id": "p24",
+   "type": "corridor",
+   "x": 0.0,
+   "z": 22.8
+  },
+  {
+   "id": "p25",
+   "type": "corridor",
+   "x": 0.0,
+   "z": 15.2
+  },
+  {
+   "id": "p26",
+   "type": "corridor",
+   "x": 0.0,
+   "z": 7.6
+  },
+  {
+   "id": "EXIT_MAIN",
+   "type": "exit",
+   "x": 81.0,
+   "z": 33.3,
+   "label": "main entrance"
+  }
+ ],
+ "edges": [
+  {
+   "from": "office",
+   "to": "p7",
+   "width": 1.2,
+   "kind": "door"
+  },
+  {
+   "from": "office",
+   "to": "p9",
+   "width": 1.2,
+   "kind": "door"
+  },
+  {
+   "from": "office",
+   "to": "p10",
+   "width": 1.2,
+   "kind": "door"
+  },
+  {
+   "from": "reception",
+   "to": "p7",
+   "width": 1.2,
+   "kind": "door"
+  },
+  {
+   "from": "reception",
+   "to": "p8",
+   "width": 1.2,
+   "kind": "door"
+  },
+  {
+   "from": "rail_transport_in_india",
+   "to": "p6",
+   "width": 1.2,
+   "kind": "door"
+  },
+  {
+   "from": "rail_transport_in_india",
+   "to": "p10",
+   "width": 1.2,
+   "kind": "door"
+  },
+  {
+   "from": "water_transport_gallery",
+   "to": "p13",
+   "width": 1.2,
+   "kind": "door"
+  },
+  {
+   "from": "water_transport_gallery",
+   "to": "p14",
+   "width": 1.2,
+   "kind": "door"
+  },
+  {
+   "from": "water_transport_gallery",
+   "to": "p10",
+   "width": 1.2,
+   "kind": "door"
+  },
+  {
+   "from": "aviation_and_space",
+   "to": "p13",
+   "width": 1.2,
+   "kind": "door"
+  },
+  {
+   "from": "aviation_and_space",
+   "to": "p15",
+   "width": 1.2,
+   "kind": "door"
+  },
+  {
+   "from": "aviation_and_space",
+   "to": "p16",
+   "width": 1.2,
+   "kind": "door"
+  },
+  {
+   "from": "computing_machines",
+   "to": "p15",
+   "width": 1.2,
+   "kind": "door"
+  },
+  {
+   "from": "computing_machines",
+   "to": "p18",
+   "width": 1.2,
+   "kind": "door"
+  },
+  {
+   "from": "computing_machines",
+   "to": "p19",
+   "width": 1.2,
+   "kind": "door"
+  },
+  {
+   "from": "principles_of_mechanics",
+   "to": "p16",
+   "width": 1.2,
+   "kind": "door"
+  },
+  {
+   "from": "principles_of_mechanics",
+   "to": "p17",
+   "width": 1.2,
+   "kind": "door"
+  },
+  {
+   "from": "principles_of_mechanics",
+   "to": "p11",
+   "width": 1.2,
+   "kind": "door"
+  },
+  {
+   "from": "electricity_and_magnetics",
+   "to": "p5",
+   "width": 1.2,
+   "kind": "door"
+  },
+  {
+   "from": "electricity_and_magnetics",
+   "to": "p6",
+   "width": 1.2,
+   "kind": "door"
+  },
+  {
+   "from": "electricity_and_magnetics",
+   "to": "p11",
+   "width": 1.2,
+   "kind": "door"
+  },
+  {
+   "from": "mathematics_gallery",
+   "to": "p3",
+   "width": 1.2,
+   "kind": "door"
+  },
+  {
+   "from": "mathematics_gallery",
+   "to": "p4",
+   "width": 1.2,
+   "kind": "door"
+  },
+  {
+   "from": "mathematics_gallery",
+   "to": "p6",
+   "width": 1.2,
+   "kind": "door"
+  },
+  {
+   "from": "machine_motion_light_and_sound",
+   "to": "p4",
+   "width": 1.2,
+   "kind": "door"
+  },
+  {
+   "from": "machine_motion_light_and_sound",
+   "to": "p5",
+   "width": 1.2,
+   "kind": "door"
+  },
+  {
+   "from": "machine_motion_light_and_sound",
+   "to": "p17",
+   "width": 1.2,
+   "kind": "door"
+  },
+  {
+   "from": "auditorium",
+   "to": "p21",
+   "width": 1.2,
+   "kind": "door"
+  },
+  {
+   "from": "auditorium",
+   "to": "p24",
+   "width": 1.2,
+   "kind": "door"
+  },
+  {
+   "from": "auditorium",
+   "to": "p25",
+   "width": 1.2,
+   "kind": "door"
+  },
+  {
+   "from": "dharamshala",
+   "to": "p22",
+   "width": 1.2,
+   "kind": "door"
+  },
+  {
+   "from": "dharamshala",
+   "to": "p23",
+   "width": 1.2,
+   "kind": "door"
+  },
+  {
+   "from": "dharamshala",
+   "to": "p25",
+   "width": 1.2,
+   "kind": "door"
+  },
+  {
+   "from": "taramondal",
+   "to": "p18",
+   "width": 1.2,
+   "kind": "door"
+  },
+  {
+   "from": "taramondal",
+   "to": "p24",
+   "width": 1.2,
+   "kind": "door"
+  },
+  {
+   "from": "p1",
+   "to": "EXIT_MAIN",
+   "width": 1.2,
+   "kind": "door"
+  },
+  {
+   "from": "p2",
+   "to": "p1",
+   "width": 3.0,
+   "kind": "corridor"
+  },
+  {
+   "from": "p2",
+   "to": "p3",
+   "width": 3.0,
+   "kind": "corridor"
+  },
+  {
+   "from": "p3",
+   "to": "p4",
+   "width": 3.0,
+   "kind": "corridor"
+  },
+  {
+   "from": "p4",
+   "to": "p5",
+   "width": 3.0,
+   "kind": "corridor"
+  },
+  {
+   "from": "p5",
+   "to": "p6",
+   "width": 3.0,
+   "kind": "corridor"
+  },
+  {
+   "from": "p6",
+   "to": "p7",
+   "width": 3.0,
+   "kind": "corridor"
+  },
+  {
+   "from": "p7",
+   "to": "p8",
+   "width": 3.0,
+   "kind": "corridor"
+  },
+  {
+   "from": "p8",
+   "to": "p9",
+   "width": 3.0,
+   "kind": "corridor"
+  },
+  {
+   "from": "p9",
+   "to": "p10",
+   "width": 3.0,
+   "kind": "corridor"
+  },
+  {
+   "from": "p10",
+   "to": "p11",
+   "width": 3.0,
+   "kind": "corridor"
+  },
+  {
+   "from": "p11",
+   "to": "p12",
+   "width": 3.0,
+   "kind": "corridor"
+  },
+  {
+   "from": "p12",
+   "to": "p17",
+   "width": 3.0,
+   "kind": "corridor"
+  },
+  {
+   "from": "p13",
+   "to": "p14",
+   "width": 3.0,
+   "kind": "corridor"
+  },
+  {
+   "from": "p14",
+   "to": "p15",
+   "width": 3.0,
+   "kind": "corridor"
+  },
+  {
+   "from": "p15",
+   "to": "p16",
+   "width": 3.0,
+   "kind": "corridor"
+  },
+  {
+   "from": "p16",
+   "to": "p17",
+   "width": 3.0,
+   "kind": "corridor"
+  },
+  {
+   "from": "p17",
+   "to": "p20",
+   "width": 3.0,
+   "kind": "corridor"
+  },
+  {
+   "from": "p18",
+   "to": "p19",
+   "width": 3.0,
+   "kind": "corridor"
+  },
+  {
+   "from": "p19",
+   "to": "p20",
+   "width": 3.0,
+   "kind": "corridor"
+  },
+  {
+   "from": "p20",
+   "to": "p21",
+   "width": 3.0,
+   "kind": "corridor"
+  },
+  {
+   "from": "p21",
+   "to": "p22",
+   "width": 3.0,
+   "kind": "corridor"
+  },
+  {
+   "from": "p22",
+   "to": "p23",
+   "width": 3.0,
+   "kind": "corridor"
+  },
+  {
+   "from": "p23",
+   "to": "p24",
+   "width": 3.0,
+   "kind": "corridor"
+  },
+  {
+   "from": "p24",
+   "to": "p25",
+   "width": 3.0,
+   "kind": "corridor"
+  },
+  {
+   "from": "p25",
+   "to": "p26",
+   "width": 3.0,
+   "kind": "corridor"
+  }
+ ],
+ "name": "iit_kgp_museum (vision, us.amazon.nova-2-lite-v1:0)",
+ "units": "m",
+ "vision": {
+  "model": "us.amazon.nova-2-lite-v1:0",
+  "width_m": 81.0,
+  "calls": 1,
+  "usage": {
+   "inputTokens": 836,
+   "outputTokens": 3534
+  },
+  "auto_links": [],
+  "photo_px": [
+   1920,
+   1277
+  ]
+ }
+}
