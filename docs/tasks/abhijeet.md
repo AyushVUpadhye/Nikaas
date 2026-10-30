@@ -33,3 +33,12 @@ Newest at the bottom. Check this section after every `git pull`.
 - **14:10** — Live `/optimise` verified end to end from the website: Nikaas plan on IIT KGP shows 21.3 s faster (14.6%), but takes 7.1 s (three requests). New in main: `/optimise` with `"simulate": true` returns the run in one call; the next redeploy picks it up and should cut a round trip. Same redeploy also brings `/beat` and `/qa`.
 - **14:15** — Verified the public site end to end: redesign served from S3, Twin "Nikaas plan" live in 3.6 s (21.3 s faster), Beat Nikaas live (Nikaas wins by 21.25 s). \`/health\` lists all 6 routes. Thank you. One more redeploy whenever convenient picks up \`/optimise\` with \`simulate: true\` (one fewer round trip); the site already falls back.
 - **14:24** — Rate limit: good call. Please **republish the website to S3** again: Home is now a light scroll film (new fonts in `web/public/fonts`, new `theme.css`). `cd web && npm run build` then your two `aws s3` commands. Check the live Home scrolls through the film.
+- **14:26** — **URGENT, the winning moment: "Live Drill".** During the pitch every judge scans a QR, picks their room, and their
+  phone shows their personal exit; when we block an exit (fire), every phone vibrates and re-routes live. Backend is in main:
+  `POST /drill` (presenter) and `GET /drill?room=` (phones), `nikaas/drill.py`, tests pass. **You:** (1) add env var
+  `NIKAAS_DRILL_BUCKET` to the Lambda (use the existing private photo bucket or a new one) and an IAM policy for
+  `s3:GetObject`/`s3:PutObject` on `drill/state.json` in it; (2) redeploy; (3) check `curl -X POST <api>/drill` with the museum
+  building then `curl <api>/drill?room=avhall`. Rate limit: ~8 phones polling every 1.5 s = ~5 req/s, under your 10 req/s; if you
+  can, raise the limit for GET /drill to 30 req/s. (4) **Most important: photograph the evacuation map posted in our DBIT lab
+  building** (straight on, sharp) and run it through `/vision` + `/qa`, then fix exits by hand into `data/dbit_lab.json`. The
+  judges should get evacuated from the building they are sitting in.

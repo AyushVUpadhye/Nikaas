@@ -187,3 +187,39 @@ def beat(req: BeatRequest):
         return beat_nikaas_score(b, req.plan, set(req.blocked))
     except (KeyError, ValueError) as e:
         raise HTTPException(422, str(e))
+
+
+# ---- Live drill: presenter controls, phones follow (nikaas/drill.py) ----
+from . import drill as drill_state  # noqa: E402
+
+
+class DrillStart(BaseModel):
+    building: dict
+    blocked: list[str] = []
+
+
+@app.post("/drill")
+def drill_start(req: DrillStart):
+    """Presenter: start or update the drill (block exits); the optimiser re-plans every room."""
+    probs = validate(req.building)
+    if probs:
+        raise HTTPException(422, {"problems": probs})
+    try:
+        return drill_state.start(req.building, req.blocked, drill_state.read())
+    except (KeyError, ValueError) as e:
+        raise HTTPException(422, str(e))
+
+
+@app.get("/drill")
+def drill_get(room: str | None = None, since: int = 0):
+    """Phones: current drill state; with ?room= only that room's instruction. ?since=<version> lets a phone
+    tell whether anything changed."""
+    s = drill_state.read()
+    if not s:
+        raise HTTPException(404, "no drill running")
+    if room is None:
+        return s
+    if room not in s["rooms"]:
+        raise HTTPException(404, f"unknown room {room}")
+    return {"version": s["version"], "updated": s["version"] > since, "room": room, "room_label": s["room_labels"].get(room, room),
+            "blocked_labels": s["blocked_labels"], "alert": room in s["changed"], **s["rooms"][room]}
