@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import View3D from './View3D.tsx'
 
 type Node = { id: string; type: 'room' | 'corridor' | 'exit'; x: number; z: number; w?: number; d?: number; label?: string }
 type Building = { name: string; nodes: Node[]; edges: { from: string; to: string; width: number }[] }
@@ -42,6 +43,7 @@ export default function App() {
   const [i, setI] = useState(0)
   const [playing, setPlaying] = useState(true)
   const [speed, setSpeed] = useState(4)
+  const [mode3d, setMode3d] = useState(true)
   const canvas = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => { fetch('data/iit_kgp_museum.json').then(r => r.json()).then(setBuilding) }, [])
@@ -67,14 +69,15 @@ export default function App() {
   }, [building])
   const scale = (c: HTMLCanvasElement) => view ? Math.min(c.width / (view.x1 - view.x0), c.height / (view.z1 - view.z0)) : 1
   const exits = building?.nodes.filter(n => n.type === 'exit') ?? []
+  const f = run?.frames[i]
 
-  function toggleExit(id: string) {
+  const toggleExit = useCallback((id: string) => {
     setBlocked(b => {
       if (b.includes(id)) return b.filter(x => x !== id)
       if (b.length + 1 >= exits.length) { setError('At least one exit must stay open.'); return b }
       return [...b, id]
     })
-  }
+  }, [exits.length])
 
   function onCanvasClick(ev: React.MouseEvent<HTMLCanvasElement>) {
     const c = canvas.current
@@ -123,9 +126,8 @@ export default function App() {
       const [px, pz] = P(x, z)
       g.fillStyle = cssVar(STATE_VAR[st] ?? '--inside'); g.beginPath(); g.arc(px, pz, 2.6, 0, 7); g.fill()
     }
-  }, [building, view, run, i, blocked])
+  }, [building, view, run, i, blocked, mode3d])
 
-  const f = run?.frames[i]
   const counts: Record<string, number> = {}
   for (const p of f?.people ?? []) counts[p[2]] = (counts[p[2]] ?? 0) + 1
   const delta = run && baseline !== undefined && blocked.length ? run.total_time_s - baseline : undefined
@@ -142,6 +144,8 @@ export default function App() {
         {exits.map(n => <button key={n.id} className={blocked.includes(n.id) ? 'on' : ''} onClick={() => toggleExit(n.id)}>{n.label ?? n.id}</button>)}
         {blocked.length > 0 && <button onClick={() => setBlocked([])}>Reset</button>}
         <span style={{ flex: 1 }} />
+        <button className={mode3d ? 'on' : ''} onClick={() => setMode3d(true)}>3D</button>
+        <button className={mode3d ? '' : 'on'} onClick={() => setMode3d(false)}>2D</button>
         <button onClick={() => setPlaying(p => !p)}>{playing ? 'Pause' : 'Play'}</button>
         {[1, 2, 4, 8].map(v => <button key={v} className={v === speed ? 'on' : ''} onClick={() => setSpeed(v)}>{v}×</button>)}
         <button onClick={() => setI(0)}>Restart</button>
@@ -149,8 +153,10 @@ export default function App() {
       {error && <div role="alert" style={{ background: '#fdecec', border: '1px solid var(--queue)', padding: '8px 12px', marginBottom: 12 }}>{error}</div>}
       <div className="layout">
         <div style={{ position: 'relative' }}>
-          <canvas ref={canvas} width={1000} height={560} onClick={onCanvasClick}
-            style={{ width: '100%', background: 'var(--card)', border: '1px solid var(--line)', cursor: 'pointer' }} />
+          {mode3d && building
+            ? <View3D building={building} frame={f} blocked={blocked} routes={run?.door_routes} onExit={toggleExit} />
+            : <canvas ref={canvas} width={1000} height={560} onClick={onCanvasClick}
+                style={{ width: '100%', background: 'var(--card)', border: '1px solid var(--line)', cursor: 'pointer' }} />}
           {!run && !error && <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', color: 'var(--muted)' }}>Simulating 507 people…</div>}
         </div>
         <aside style={{ background: 'var(--card)', border: '1px solid var(--line)', padding: 16 }}>
